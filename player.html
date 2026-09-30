@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <style>html,body,#player{width:100%;height:100%;margin:0;background:#000}</style>
+</head>
+<body>
+  <div id="player"></div>
+  <script>
+    (() => {
+      let player = null;
+      let apiReady = false;
+      let queued = null;
+
+      function send(type, extra = {}) {
+        window.parent.postMessage({ source: "mediahub-player", type, ...extra }, "*");
+      }
+
+      function reportYouTubeState(event) {
+        const states = window.YT && YT.PlayerState;
+        if (event.data === states.ENDED) {
+          send("ended", { state: "stopped" });
+          return;
+        }
+        const state = event.data === states.PLAYING ? "playing"
+          : event.data === states.PAUSED ? "paused"
+          : event.data === states.BUFFERING ? "loading"
+          : "idle";
+        send("state", { state });
+      }
+
+      function create(videoId, autoplay) {
+        if (!apiReady || !videoId) return false;
+        if (player) player.destroy();
+        player = new YT.Player("player", {
+          videoId,
+          playerVars: {
+            autoplay: autoplay ? 1 : 0,
+            controls: 1,
+            rel: 0,
+            playsinline: 1,
+            enablejsapi: 1,
+            origin: location.origin
+          },
+          events: {
+            onReady: () => send("ready"),
+            onStateChange: reportYouTubeState,
+            onError: event => send("error", { code: event.data }),
+            onAutoplayBlocked: () => send("autoplay-blocked")
+          }
+        });
+        return true;
+      }
+
+      function command(message) {
+        if (!message || !message.command) return;
+        if (message.command === "load") {
+          if (!create(message.videoId, true)) queued = message;
+          return;
+        }
+        if (!player) { queued = message; return; }
+        if (message.command === "play") player.playVideo();
+        if (message.command === "pause") player.pauseVideo();
+        if (message.command === "stop") player.stopVideo();
+        if (message.command === "setVolume") player.setVolume(Math.max(0, Math.min(100, Number(message.volume || 0) * 100)));
+      }
+
+      window.addEventListener("message", event => command(event.data));
+      window.onYouTubeIframeAPIReady = () => {
+        apiReady = true;
+        if (queued) { const next = queued; queued = null; command(next); }
+      };
+      const script = document.createElement("script");
+      script.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(script);
+    })();
+  </script>
+</body>
+</html>
