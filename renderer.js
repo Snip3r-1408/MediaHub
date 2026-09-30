@@ -87,6 +87,10 @@
     let autoMix = localStorage.getItem(AUTO_MIX_KEY) === "true";
     let lastSearchQuery = "";
     const failedVideoIds = new Set();
+    const playedVideoIds = new Set();
+    let mixRound = 0;
+    let advancing = false;
+    let blockedRecoveries = 0;
 
     const welcome = el("div", "mh-welcome");
     const welcomeInner = el("div", "mh-welcome-inner");
@@ -250,6 +254,17 @@
       }
     }
 
+    function forgetBlockedItem(videoId) {
+      if (!videoId) return;
+      playlists.forEach(list => {
+        list.items = list.items.filter(item => item.id !== videoId);
+      });
+      currentResults = currentResults.filter(item => item.id !== videoId);
+      save();
+      renderResults(currentResults);
+      renderQueue();
+    }
+
     function artistKey(item) {
       return decode(item?.channel || "").trim().toLocaleLowerCase();
     }
@@ -334,6 +349,7 @@
 
     async function play(item) {
       selected = item;
+      playedVideoIds.add(item.id);
       showError("");
       try {
         const activation = await api?.setActiveProvider?.(ID);
@@ -361,51 +377,77 @@
     }
 
     async function advancePlayback() {
+      if (advancing) return;
+      advancing = true;
+      try {
       let pool = activePlaylist().items.filter(item => !failedVideoIds.has(item.id));
       if (!pool.length) pool = currentResults.filter(item => !failedVideoIds.has(item.id));
       const index = pool.findIndex(item => item.id === selected?.id);
       let next = null;
       if (playMode === "shuffle" && pool.length) {
-        const choices = pool.filter(item => item.id !== selected?.id);
-        next = choices.length ? choices[Math.floor(Math.random() * choices.length)] : pool[0];
+        const choices = pool.filter(item => item.id !== selected?.id && !playedVideoIds.has(item.id));
+        if (choices.length) next = choices[Math.floor(Math.random() * choices.length)];
       } else if (pool[index + 1]) {
         next = pool[index + 1];
-      } else if (playMode === "repeat" && pool.length) {
-        next = pool[0];
       }
 
       if (!next && autoMix && auth?.search) {
-        const seed = decode(selected?.channel || lastSearchQuery || selected?.title || input.value).trim();
-        if (seed) {
-          try {
-            const suggestions = await auth.search(`${seed} ähnliche Künstler Genre Mix`);
+        const title = decode(selected?.title || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " ").trim();
+        const artist = decode(selected?.channel || "").trim();
+        const original = (lastSearchQuery || input.value).trim();
+        const searches = [
+          `${original || artist} Genre Mix Playlist`,
+          `${title || original} ähnliche Songs`,
+          `${artist || original} ähnliche Künstler Musik`
+        ].filter(Boolean);
+        try {
+          for (let attempt = 0; attempt < searches.length && !next; attempt += 1) {
+            const query = searches[(mixRound + attempt) % searches.length];
+            const suggestions = await auth.search(query);
             const additions = mergeIntoPlaylist(suggestions, 8, 2);
             if (additions.length) {
+              mixRound = (mixRound + attempt + 1) % searches.length;
               next = playMode === "shuffle"
                 ? additions[Math.floor(Math.random() * additions.length)]
                 : additions[0];
             }
-          } catch (err) {
-            showError(err.message || "Auto-Mix konnte keine weitere Musik laden.");
           }
+        } catch (err) {
+          showError(err.message || "Auto-Mix konnte keine weitere Musik laden.");
         }
       }
 
+      if (!next && playMode === "repeat" && pool.length) next = pool[0];
+      if (!next && playMode === "shuffle" && pool.length) {
+        playedVideoIds.clear();
+        next = pool[Math.floor(Math.random() * pool.length)];
+      }
       if (next) await play(next);
       else api?.reportProviderState?.(ID, { state: "stopped" });
+      } finally {
+        advancing = false;
+      }
     }
 
     function receivePlayerMessage(event) {
       if (event.source !== frame?.contentWindow || event.data?.source !== "mediahub-player") return;
       if (event.data.type === "error") {
         const code = Number(event.data.code);
-        if ([101, 150].includes(code) && selected?.id) failedVideoIds.add(selected.id);
-        showError([101, 150].includes(code)
-          ? autoMix
-            ? "Dieser Titel darf hier nicht abgespielt werden. Auto-Mix versucht den nächsten Titel."
-            : "Dieser Titel darf vom Rechteinhaber nicht außerhalb von YouTube abgespielt werden. Bitte wähle einen anderen Treffer."
-          : `YouTube-Player-Fehler: ${code}`);
-        if ([101, 150].includes(code) && autoMix) window.setTimeout(() => advancePlayback(), 500);
+        if ([101, 150].includes(code)) {
+          const blockedId = selected?.id;
+          if (blockedId) {
+            failedVideoIds.add(blockedId);
+            forgetBlockedItem(blockedId);
+          }
+          blockedRecoveries += 1;
+          const canContinue = blockedRecoveries <= 8 && (autoMix || activePlaylist().items.length || currentResults.length);
+          showError(canContinue
+            ? "Diese Version ist gesperrt – MediaHub sucht automatisch die nächste passende Version …"
+            : "Mehrere YouTube-Versionen sind für externe Player gesperrt. Bitte starte eine neue Suche.");
+          if (canContinue) window.setTimeout(() => advancePlayback(), 350);
+        } else {
+          showError(`YouTube-Player-Fehler: ${code}`);
+        }
       }
       if (event.data.type === "autoplay-blocked") showError("YouTube hat den automatischen Start blockiert. Bitte drücke unten auf Start.");
       if (event.data.type === "ended") {
@@ -413,6 +455,10 @@
         return;
       }
       if (event.data.type === "state" && selected) {
+        if (event.data.state === "playing") {
+          blockedRecoveries = 0;
+          showError("");
+        }
         api?.reportProviderState?.(ID, {
           state: event.data.state,
           title: decode(selected.title),

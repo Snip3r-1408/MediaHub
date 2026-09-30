@@ -11,7 +11,9 @@
     (() => {
       let player = null;
       let apiReady = false;
+      let playerReady = false;
       let queued = null;
+      let endedSent = false;
 
       function send(type, extra = {}) {
         window.parent.postMessage({ source: "mediahub-player", type, ...extra }, "*");
@@ -20,9 +22,13 @@
       function reportYouTubeState(event) {
         const states = window.YT && YT.PlayerState;
         if (event.data === states.ENDED) {
-          send("ended", { state: "stopped" });
+          if (!endedSent) {
+            endedSent = true;
+            send("ended", { state: "stopped" });
+          }
           return;
         }
+        if (event.data === states.PLAYING) endedSent = false;
         const state = event.data === states.PLAYING ? "playing"
           : event.data === states.PAUSED ? "paused"
           : event.data === states.BUFFERING ? "loading"
@@ -30,9 +36,18 @@
         send("state", { state });
       }
 
-      function create(videoId, autoplay) {
+      function load(videoId, autoplay) {
         if (!apiReady || !videoId) return false;
-        if (player) player.destroy();
+        if (player && playerReady) {
+          endedSent = false;
+          if (autoplay) player.loadVideoById(videoId);
+          else player.cueVideoById(videoId);
+          return true;
+        }
+        if (player) {
+          queued = { command: "load", videoId };
+          return true;
+        }
         player = new YT.Player("player", {
           videoId,
           playerVars: {
@@ -44,7 +59,11 @@
             origin: location.origin
           },
           events: {
-            onReady: () => send("ready"),
+            onReady: () => {
+              playerReady = true;
+              send("ready");
+              if (queued) { const next = queued; queued = null; command(next); }
+            },
             onStateChange: reportYouTubeState,
             onError: event => send("error", { code: event.data }),
             onAutoplayBlocked: () => send("autoplay-blocked")
@@ -56,7 +75,7 @@
       function command(message) {
         if (!message || !message.command) return;
         if (message.command === "load") {
-          if (!create(message.videoId, true)) queued = message;
+          if (!load(message.videoId, true)) queued = message;
           return;
         }
         if (!player) { queued = message; return; }
@@ -71,6 +90,15 @@
         apiReady = true;
         if (queued) { const next = queued; queued = null; command(next); }
       };
+      window.setInterval(() => {
+        if (!playerReady || endedSent || typeof player.getDuration !== "function") return;
+        const duration = Number(player.getDuration() || 0);
+        const current = Number(player.getCurrentTime() || 0);
+        if (duration > 1 && current >= duration - 0.5) {
+          endedSent = true;
+          send("ended", { state: "stopped", fallback: true });
+        }
+      }, 1000);
       const script = document.createElement("script");
       script.src = "https://www.youtube.com/iframe_api";
       document.head.appendChild(script);
