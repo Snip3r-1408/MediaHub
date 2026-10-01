@@ -1,7 +1,7 @@
 {
   "id": "mediahub",
   "name": "MediaHub",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "description": "YouTube Music für WebRadio.",
   "main": "main.js",
   "renderer": "renderer.js",

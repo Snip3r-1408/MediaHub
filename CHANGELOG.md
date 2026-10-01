@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.8.1 – 2026-10-01
+
+### Behoben
+
+- Auto-Mix bevorzugt nun einzelne Songs statt langer Mixe und Playlisten
+- Videos über zwölf Minuten werden anhand verfügbarer Laufzeitdaten abgelehnt
+- Typische Langform-Titel wie „Full Album“, „1 Hour“ und „Full Concert“ werden
+  auch ohne Laufzeitangabe herausgefiltert
+
 ## 0.8.0 – 2026-10-01
 
 ### Neu

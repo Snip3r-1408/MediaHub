@@ -22,6 +22,7 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Auto-Mix mit echten Künstler- und Genre-Daten von MusicBrainz
 - Vier Mix-Arten: ähnliche Künstler, gleiches Genre, breiter Mix und Überraschung
 - Automatisches Nachladen neuer Titel am Ende der Warteschlange
+- Filter gegen komplette Alben, Konzerte und stundenlange Zusammenstellungen
 - Automatisches Überspringen von Videos mit Einbettungssperre
 - Dezente, platzsparende Oberfläche im WebRadio-Design
 

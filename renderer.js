@@ -316,6 +316,24 @@
       return tags.slice(0, 3);
     }
 
+    function durationSeconds(item) {
+      const raw = item?.durationSeconds ?? item?.lengthSeconds ?? item?.duration;
+      if (Number.isFinite(Number(raw))) return Number(raw);
+      const text = String(raw || "").trim();
+      const iso = text.match(/^PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/i);
+      if (iso) return Number(iso[1] || 0) * 3600 + Number(iso[2] || 0) * 60 + Number(iso[3] || 0);
+      if (/^\d{1,2}:\d{2}(?::\d{2})?$/.test(text)) {
+        return text.split(":").reduce((total, part) => total * 60 + Number(part), 0);
+      }
+      return 0;
+    }
+
+    function isLongForm(item) {
+      if (durationSeconds(item) > 12 * 60) return true;
+      const title = decode(item?.title || "").toLowerCase();
+      return /(full\s+album|complete\s+album|album\s+completo|entire\s+album|\d+\s*(?:hour|hours|stunden?)|one\s+hour|non[ -]?stop|continuous\s+mix|full\s+concert|live\s+concert|greatest\s+hits|best\s+of\s+\d{4}|music\s+compilation|full\s+set)/i.test(title);
+    }
+
     async function findGenres(artist) {
       const key = artist.toLocaleLowerCase();
       const cached = genreCache[key];
@@ -366,12 +384,12 @@
       const chosen = mixStyle === "wide" ? broadGenre(tags) : tags.slice(0, 3);
       if (mixStyle === "surprise") {
         const tag = chosen[Math.floor(Math.random() * chosen.length)];
-        return [`${tag} neue Musik Playlist`, `${tag} Geheimtipps Musik`, `${tag} Mix`];
+        return [`${tag} neuer Song official video`, `${tag} Geheimtipp official audio`, `${tag} neue Band Song`];
       }
       return [
-        `${chosen.slice(0, 2).join(" ")} Musik Playlist`,
-        `${chosen[0]} ähnliche Bands Mix`,
-        `${chosen.slice(0, 3).join(" ")} Songs`
+        `${chosen.slice(0, 2).join(" ")} official music video`,
+        `${chosen[0]} ähnliche Bands official audio`,
+        `${chosen.slice(0, 3).join(" ")} einzelner Song`
       ];
     }
 
@@ -385,7 +403,7 @@
       });
       const additions = [];
       for (const item of items) {
-        if (!item?.id || known.has(item.id) || failedVideoIds.has(item.id)) continue;
+        if (!item?.id || known.has(item.id) || failedVideoIds.has(item.id) || isLongForm(item)) continue;
         const key = artistKey(item);
         if (key && (artistCounts.get(key) || 0) >= maxPerArtist) continue;
         additions.push(item);
@@ -491,8 +509,8 @@
       if (advancing) return;
       advancing = true;
       try {
-      let pool = activePlaylist().items.filter(item => !failedVideoIds.has(item.id));
-      if (!pool.length) pool = currentResults.filter(item => !failedVideoIds.has(item.id));
+      let pool = activePlaylist().items.filter(item => !failedVideoIds.has(item.id) && !isLongForm(item));
+      if (!pool.length) pool = currentResults.filter(item => !failedVideoIds.has(item.id) && !isLongForm(item));
       const index = pool.findIndex(item => item.id === selected?.id);
       let next = null;
       if (playMode === "shuffle" && pool.length) {
