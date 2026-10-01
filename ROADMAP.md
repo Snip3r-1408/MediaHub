@@ -8,7 +8,7 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 
 - Zuverlässigkeit des endlosen Auto-Mix weiter verbessern
 - Nicht einbettbare Videos bereits vor der Wiedergabe herausfiltern
-- Bessere Erkennung von Künstler, Titel und Genre
+- Künstler- und Genre-Erkennung für mehr Sonderfälle weiter verfeinern
 - Sichtbare Lade- und Wiederherstellungszustände für den Auto-Mix
 - Doppelte Titel und alternative Uploads desselben Songs besser erkennen
 
@@ -49,4 +49,3 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 - Umgehung von YouTube-Einbettungs- oder Zugriffsbeschränkungen
 - Versteckte Audio-only-Wiedergabe entgegen den YouTube-Richtlinien
 - Speicherung von Google-Passwörtern oder privaten Zugangsdaten im Plugin
-

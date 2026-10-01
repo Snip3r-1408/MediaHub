@@ -19,7 +19,8 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Steuerung über die zentrale Player-Leiste von WebRadio
 - Beliebig viele lokal gespeicherte Playlisten
 - Wiedergabe der Reihe nach, im Kreis oder zufällig
-- Auto-Mix mit ähnlichen Künstlern und passender Genre-Mischung
+- Auto-Mix mit echten Künstler- und Genre-Daten von MusicBrainz
+- Vier Mix-Arten: ähnliche Künstler, gleiches Genre, breiter Mix und Überraschung
 - Automatisches Nachladen neuer Titel am Ende der Warteschlange
 - Automatisches Überspringen von Videos mit Einbettungssperre
 - Dezente, platzsparende Oberfläche im WebRadio-Design
@@ -49,11 +50,13 @@ Weitere Hinweise stehen in [INSTALL.md](INSTALL.md).
 2. Nach einem Titel, Künstler oder Album suchen.
 3. Einen Treffer direkt starten oder über `+` zur Playlist hinzufügen.
 4. In der Playlist den Wiedergabemodus auswählen.
-5. Mit dem Funkeln-Symbol den Auto-Mix aktivieren.
+5. Eine Mix-Art wählen und mit dem Funkeln-Symbol den Auto-Mix aktivieren.
 
-Auto-Mix ergänzt höchstens zwei Titel desselben Künstlers automatisch. Dadurch
-bleibt die Mischung abwechslungsreich. Ist die Warteschlange aufgebraucht,
-sucht MediaHub selbstständig nach weiteren passenden Titeln.
+Auto-Mix erkennt den Künstler aus dem Videotitel und fragt passende Stilbegriffe
+bei MusicBrainz ab. Bei Falling In Reverse entstehen so beispielsweise Suchen
+nach Metalcore und Post-Hardcore, ohne den Künstlernamen erneut vorzugeben.
+MediaHub ergänzt höchstens zwei Titel desselben Künstlers automatisch. Ist die
+Warteschlange aufgebraucht, werden selbstständig weitere Titel gesucht.
 
 ## Voraussetzungen
 
@@ -61,6 +64,11 @@ sucht MediaHub selbstständig nach weiteren passenden Titeln.
 - Linux oder Windows mit einer unterstützten WebRadio-Version
 - Internetverbindung
 - Google-Konto für die YouTube-Suche
+
+Die Genre-Erkennung verwendet die freie Musikdatenbank
+[MusicBrainz](https://musicbrainz.org/). Kann sie nicht erreicht werden, fällt
+MediaHub automatisch auf eine lokale Erkennung beziehungsweise die Suche nach
+ähnlichen Künstlern zurück.
 
 ## Bekannte Einschränkungen
 
@@ -94,4 +102,3 @@ MediaHub ist ein unabhängiges, inoffizielles Community-Projekt. Es steht in
 keiner Verbindung zu Google LLC oder YouTube. YouTube und YouTube Music sind
 Marken ihrer jeweiligen Rechteinhaber. Für die Nutzung gelten die Bedingungen
 der angebundenen Dienste.
-

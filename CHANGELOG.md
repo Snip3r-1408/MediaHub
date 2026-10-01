@@ -2,6 +2,22 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.8.0 – 2026-10-01
+
+### Neu
+
+- Echte Genre-Erkennung über die offene Musikdatenbank MusicBrainz
+- Vier wählbare Auto-Mix-Arten: ähnliche Künstler, gleiches Genre, breiter Mix
+  und Überraschung
+- Lokaler Genre-Zwischenspeicher für schnellere weitere Suchen
+- Sicherer Rückfall, falls die externe Musikdatenbank nicht erreichbar ist
+
+### Verbessert
+
+- Genre-Suchen enthalten nicht länger zwangsläufig den ursprünglichen Künstler
+- Künstler werden aus Videotiteln statt aus Plattenlabel-Kanälen ermittelt
+- Vielfalt wird nun pro tatsächlichem Künstler begrenzt
+
 ## 0.7.3 – 2026-09-30
 
 ### Neu
@@ -61,4 +77,3 @@ Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 ## 0.1.0
 
 - Erste lauffähige MediaHub-Ansicht für WebRadio
-

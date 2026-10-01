@@ -6,6 +6,8 @@
   const STORE_KEY = "mediahub-playlists-v1";
   const MODE_KEY = "mediahub-play-mode-v1";
   const AUTO_MIX_KEY = "mediahub-auto-mix-v1";
+  const MIX_STYLE_KEY = "mediahub-mix-style-v1";
+  const GENRE_CACHE_KEY = "mediahub-genre-cache-v1";
   let disposeView = null;
 
   const css = `
@@ -15,7 +17,7 @@
     .mh-top{display:flex;align-items:center;gap:10px;margin-bottom:20px}.mh-brand{min-width:150px}.mh-brand h1{margin:2px 0 0;font-size:24px}.mh-brand p{margin:0;color:var(--accent-color,#8277ff);font-size:9px;font-weight:800;letter-spacing:.15em}.mh-search{display:flex;flex:0 1 430px;gap:4px;margin-left:auto;padding:4px;border-radius:13px;background:#ffffff0b}.mh-input,.mh-select{min-width:0;border:0;border-radius:10px;background:#ffffff0b;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:7px 10px;background:transparent}.mh-input:focus,.mh-select:focus{box-shadow:0 0 0 2px var(--accent-color,#7166ff)}.mh-select{padding:8px 10px}.mh-error{margin:-8px 0 14px;padding:9px 12px;border-radius:9px;background:#ff5f5f12;color:#ff9d9d;font-size:13px}
     .mh-content{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(390px,1.35fr);gap:28px;align-items:start}.mh-library{min-width:0}.mh-tabs{display:flex;align-items:center;gap:6px;margin-bottom:9px}.mh-tab{border:0;background:transparent;color:var(--text-muted,#999);font:inherit;font-weight:700;padding:7px 9px;border-radius:8px;cursor:pointer}.mh-tab.active{background:#ffffff0e;color:inherit}.mh-count{margin-left:auto;color:var(--text-muted,#888);font-size:12px}.mh-list,.mh-queue{max-height:410px;margin:0;padding:0;list-style:none;overflow:auto}.mh-empty{margin:0;padding:28px 8px;color:var(--text-muted,#999);font-size:13px;line-height:1.5}
     .mh-result{display:grid;grid-template-columns:66px minmax(0,1fr) 30px;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer}.mh-result:hover,.mh-result.active,.mh-queue-row:hover,.mh-queue-row.active{background:#ffffff0b}.mh-result img{width:66px;height:42px;border-radius:7px;object-fit:cover}.mh-copy{display:grid;min-width:0;gap:2px}.mh-copy>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-copy strong{font-size:13px}.mh-copy span{color:var(--text-muted,#999);font-size:12px}.mh-plus,.mh-remove{border:0;background:#ffffff0c;color:var(--text-muted,#aaa);cursor:pointer}.mh-plus{width:28px;height:28px;border-radius:8px;font-size:17px}.mh-plus:hover{background:var(--accent-color,#7166ff);color:#fff}
-    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto auto;gap:7px;margin-bottom:9px}.mh-mini{padding:7px 10px;border-radius:8px}.mh-mini.active{background:var(--accent-color,#7166ff);color:#fff}.mh-queue-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 8px;border-radius:9px;cursor:pointer}.mh-queue-row span{color:var(--text-muted,#999);font-size:12px}.mh-queue-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.mh-remove{font-size:17px;border-radius:6px}
+    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,auto) auto auto auto auto;gap:7px;margin-bottom:9px}.mh-mini{padding:7px 10px;border-radius:8px}.mh-mini.active{background:var(--accent-color,#7166ff);color:#fff}.mh-mix-style{max-width:150px;font-size:12px}.mh-queue-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 8px;border-radius:9px;cursor:pointer}.mh-queue-row span{color:var(--text-muted,#999);font-size:12px}.mh-queue-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.mh-remove{font-size:17px;border-radius:6px}
     .mh-player{min-width:0}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px}.mh-player-label h2{margin:0;font-size:15px}.mh-player-label span{color:var(--text-muted,#888);font-size:11px}.mh-player-placeholder{min-height:250px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#ffffff08,#ffffff03);color:var(--text-muted,#999);font-size:13px;text-align:center;padding:25px}.mh-frame{height:260px;min-height:200px;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 16px 40px #0004}.mh-frame iframe{width:100%;height:100%;border:0;display:block}.mh-now{display:flex;gap:12px;align-items:center;padding:14px 2px}.mh-now img{width:46px;height:46px;border-radius:9px;object-fit:cover}.mh-now-copy{min-width:0}.mh-now h3{margin:0 0 3px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-now p{margin:0;color:var(--text-muted,#999);font-size:12px}.mh-player-note{margin:0 2px;color:var(--text-muted,#777);font-size:11px}
     @media(max-width:780px){.mediahub{padding:20px}.mh-top{flex-wrap:wrap}.mh-search{order:3;flex:1 0 100%;margin-left:0}.mh-content{grid-template-columns:1fr}.mh-list,.mh-queue{max-height:280px}.mh-frame{height:230px}}
   `;
@@ -85,12 +87,16 @@
     let currentTab = "results";
     let playMode = localStorage.getItem(MODE_KEY) || "once";
     let autoMix = localStorage.getItem(AUTO_MIX_KEY) === "true";
+    let mixStyle = localStorage.getItem(MIX_STYLE_KEY) || "genre";
     let lastSearchQuery = "";
     const failedVideoIds = new Set();
     const playedVideoIds = new Set();
     let mixRound = 0;
     let advancing = false;
     let blockedRecoveries = 0;
+    let lastGenreRequest = 0;
+    let genreCache = {};
+    try { genreCache = JSON.parse(localStorage.getItem(GENRE_CACHE_KEY) || "{}"); } catch { genreCache = {}; }
 
     const welcome = el("div", "mh-welcome");
     const welcomeInner = el("div", "mh-welcome-inner");
@@ -136,6 +142,19 @@
 
     const playlistView = el("div", "mh-hidden");
     const picker = el("select", "mh-select");
+    const mixStylePicker = el("select", "mh-select mh-mix-style");
+    [
+      ["related", "Ähnliche Künstler"],
+      ["genre", "Gleiches Genre"],
+      ["wide", "Breiter Mix"],
+      ["surprise", "Überraschung"]
+    ].forEach(([value, label]) => {
+      const option = el("option", "", label);
+      option.value = value;
+      option.selected = value === mixStyle;
+      mixStylePicker.append(option);
+    });
+    mixStylePicker.title = "Art des Auto-Mix";
     const mixButton = el("button", "mh-btn ghost mh-mini");
     const modeButton = el("button", "mh-btn ghost mh-mini");
     const newList = el("button", "mh-btn ghost mh-mini");
@@ -150,7 +169,7 @@
     newList.append(icon("plus"));
     deleteList.append(icon("trash"));
     const playlistBar = el("div", "mh-playlist-bar");
-    playlistBar.append(picker, mixButton, modeButton, newList, deleteList);
+    playlistBar.append(picker, mixStylePicker, mixButton, modeButton, newList, deleteList);
     const queue = el("ol", "mh-queue");
     const queueEmpty = el("p", "mh-empty", "Füge Treffer über das Plus zu deiner Playlist hinzu.");
     playlistView.append(playlistBar, queueEmpty, queue);
@@ -266,7 +285,94 @@
     }
 
     function artistKey(item) {
-      return decode(item?.channel || "").trim().toLocaleLowerCase();
+      return seedArtist(item).toLocaleLowerCase();
+    }
+
+    function cleanArtist(value) {
+      return decode(value || "")
+        .replace(/\s*[-–—]\s*(topic|vevo|official)$/i, "")
+        .replace(/\s+(official|vevo)$/i, "")
+        .replace(/^[\s"'“”]+|[\s"'“”]+$/g, "")
+        .trim();
+    }
+
+    function seedArtist(item, fallback = "") {
+      const title = decode(item?.title || "").replace(/&quot;/gi, '"');
+      const titleArtist = title.split(/\s+(?:-|–|—|\|)\s+/)[0];
+      if (titleArtist && titleArtist.length <= 70 && titleArtist !== title) return cleanArtist(titleArtist);
+      const channel = cleanArtist(item?.channel);
+      if (channel && !/(records|music|entertainment|official channel)$/i.test(channel)) return channel;
+      return cleanArtist(fallback.split(/\s+(?:-|–|—)\s+/)[0]);
+    }
+
+    function broadGenre(tags) {
+      const joined = tags.join(" ").toLowerCase();
+      if (/(metalcore|post-hardcore|screamo|hardcore|metal)/.test(joined)) return ["modern metal", "alternative metal", "post-hardcore"];
+      if (/(punk|emo)/.test(joined)) return ["alternative rock", "pop punk", "emo rock"];
+      if (/(hip hop|rap|trap)/.test(joined)) return ["hip hop", "alternative rap", "modern rap"];
+      if (/(electronic|techno|house|edm)/.test(joined)) return ["electronic", "dance", "alternative electronic"];
+      if (/(country|folk|americana)/.test(joined)) return ["country rock", "folk rock", "americana"];
+      if (/(pop|r&b|soul)/.test(joined)) return ["alternative pop", "modern rock", "indie pop"];
+      return tags.slice(0, 3);
+    }
+
+    async function findGenres(artist) {
+      const key = artist.toLocaleLowerCase();
+      const cached = genreCache[key];
+      if (cached?.tags?.length && Date.now() - cached.savedAt < 30 * 24 * 60 * 60 * 1000) return cached.tags;
+      const wait = Math.max(0, 1100 - (Date.now() - lastGenreRequest));
+      if (wait) await new Promise(resolve => window.setTimeout(resolve, wait));
+      lastGenreRequest = Date.now();
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 6500);
+      try {
+        const query = new URLSearchParams({ query: `artist:"${artist}"`, fmt: "json", limit: "3" });
+        const response = await fetch(`https://musicbrainz.org/ws/2/artist/?${query}`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`Musikdatenbank antwortet mit ${response.status}`);
+        const data = await response.json();
+        const match = data.artists?.find(entry => entry.name?.toLocaleLowerCase() === key) || data.artists?.[0];
+        const tags = (match?.tags || [])
+          .filter(tag => tag?.name && tag.count >= 1)
+          .sort((a, b) => (b.count || 0) - (a.count || 0))
+          .map(tag => cleanArtist(tag.name).toLowerCase())
+          .filter((tag, index, all) => tag && !["seen live", "favorites", "american"].includes(tag) && all.indexOf(tag) === index)
+          .slice(0, 5);
+        if (tags.length) {
+          genreCache[key] = { tags, savedAt: Date.now() };
+          localStorage.setItem(GENRE_CACHE_KEY, JSON.stringify(genreCache));
+        }
+        return tags;
+      } finally {
+        window.clearTimeout(timer);
+      }
+    }
+
+    async function mixQueries(item, fallback = "") {
+      const artist = seedArtist(item, fallback);
+      if (mixStyle === "related") return [`${artist || fallback} ähnliche Künstler Musik`];
+      let tags = [];
+      if (artist) {
+        try { tags = await findGenres(artist); } catch { /* local fallback below */ }
+      }
+      if (!tags.length) {
+        const hint = `${fallback} ${decode(item?.title || "")}`.toLowerCase();
+        if (/(metal|metalcore|falling in reverse)/.test(hint)) tags = ["metalcore", "post-hardcore", "alternative metal"];
+        else if (/(rock|punk|emo)/.test(hint)) tags = ["alternative rock", "pop punk"];
+      }
+      if (!tags.length) return [`${artist || fallback} ähnliche Künstler Musik`];
+      const chosen = mixStyle === "wide" ? broadGenre(tags) : tags.slice(0, 3);
+      if (mixStyle === "surprise") {
+        const tag = chosen[Math.floor(Math.random() * chosen.length)];
+        return [`${tag} neue Musik Playlist`, `${tag} Geheimtipps Musik`, `${tag} Mix`];
+      }
+      return [
+        `${chosen.slice(0, 2).join(" ")} Musik Playlist`,
+        `${chosen[0]} ähnliche Bands Mix`,
+        `${chosen.slice(0, 3).join(" ")} Songs`
+      ];
     }
 
     function mergeIntoPlaylist(items, limit = 8, maxPerArtist = 2) {
@@ -297,8 +403,13 @@
     async function fillGenreMix(seed, firstResults = []) {
       const additions = mergeIntoPlaylist(firstResults, 4, 2);
       if (!seed || additions.length >= 8) return additions;
-      const related = await auth.search(`${seed} ähnliche Künstler Genre Mix`);
-      return additions.concat(mergeIntoPlaylist(related, 8 - additions.length, 2));
+      const queries = await mixQueries(firstResults[0], seed);
+      for (const query of queries) {
+        const related = await auth.search(query);
+        additions.push(...mergeIntoPlaylist(related, 8 - additions.length, 2));
+        if (additions.length >= 8) break;
+      }
+      return additions;
     }
 
     function renderResults(items) {
@@ -392,15 +503,9 @@
       }
 
       if (!next && autoMix && auth?.search) {
-        const title = decode(selected?.title || "").replace(/\([^)]*\)|\[[^\]]*\]/g, " ").trim();
-        const artist = decode(selected?.channel || "").trim();
         const original = (lastSearchQuery || input.value).trim();
-        const searches = [
-          `${original || artist} Genre Mix Playlist`,
-          `${title || original} ähnliche Songs`,
-          `${artist || original} ähnliche Künstler Musik`
-        ].filter(Boolean);
         try {
+          const searches = await mixQueries(selected, original);
           for (let attempt = 0; attempt < searches.length && !next; attempt += 1) {
             const query = searches[(mixRound + attempt) % searches.length];
             const suggestions = await auth.search(query);
@@ -518,6 +623,14 @@
     picker.addEventListener("change", () => {
       playlistId = picker.value;
       renderQueue();
+    });
+    mixStylePicker.addEventListener("change", () => {
+      mixStyle = mixStylePicker.value;
+      localStorage.setItem(MIX_STYLE_KEY, mixStyle);
+      mixRound = 0;
+      if (autoMix && selected) {
+        mixQueries(selected, lastSearchQuery || input.value.trim()).catch(() => {});
+      }
     });
     modeButton.addEventListener("click", () => {
       playMode = playMode === "once" ? "repeat" : playMode === "repeat" ? "shuffle" : "once";
