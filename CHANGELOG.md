@@ -2,6 +2,15 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.8.2 – 2026-10-01
+
+### Oberfläche
+
+- Playlist-Werkzeuge in ein kompaktes Drei-Punkte-Menü verschoben
+- Schmale Playlist-Spalte von unnötigen Schaltflächen befreit
+- Doppelte Titelanzeige unter dem YouTube-Player entfernt
+- Player verkleinert und Inhaltsaufteilung ruhiger gestaltet
+
 ## 0.8.1 – 2026-10-01
 
 ### Behoben

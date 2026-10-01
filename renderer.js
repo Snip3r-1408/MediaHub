@@ -15,10 +15,10 @@
     .mh-hidden{display:none!important}.mh-btn{border:0;border-radius:10px;padding:10px 15px;background:var(--accent-color,#7166ff);color:#fff;font:inherit;font-weight:700;cursor:pointer;transition:.16s ease}.mh-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}.mh-btn:disabled{opacity:.55;cursor:wait;transform:none}.mh-btn.ghost{background:#ffffff0d;color:var(--text-muted,#aaa)}.mh-icon-btn{width:40px;height:40px;display:grid;place-items:center;padding:0;border-radius:12px}.mh-icon-btn svg,.mh-mini svg,.mh-plus svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.mh-icon-btn.ghost:hover{background:#ffffff16;color:#fff}
     .mh-welcome{min-height:470px;display:grid;place-items:center;text-align:center}.mh-welcome-inner{max-width:480px;padding:32px}.mh-mark{width:54px;height:54px;margin:0 auto 22px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,var(--accent-color,#7166ff),#a352ff);font-size:24px;box-shadow:0 16px 42px #6c5cff35}.mh-eyebrow{margin:0 0 9px;color:var(--accent-color,#8277ff);font-size:10px;font-weight:800;letter-spacing:.16em}.mh-welcome h1{margin:0 0 12px;font-size:34px}.mh-welcome p{margin:0 auto 25px;color:var(--text-muted,#a6a6a6);font-size:15px;line-height:1.65}
     .mh-top{display:flex;align-items:center;gap:10px;margin-bottom:20px}.mh-brand{min-width:150px}.mh-brand h1{margin:2px 0 0;font-size:24px}.mh-brand p{margin:0;color:var(--accent-color,#8277ff);font-size:9px;font-weight:800;letter-spacing:.15em}.mh-search{display:flex;flex:0 1 430px;gap:4px;margin-left:auto;padding:4px;border-radius:13px;background:#ffffff0b}.mh-input,.mh-select{min-width:0;border:0;border-radius:10px;background:#ffffff0b;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:7px 10px;background:transparent}.mh-input:focus,.mh-select:focus{box-shadow:0 0 0 2px var(--accent-color,#7166ff)}.mh-select{padding:8px 10px}.mh-error{margin:-8px 0 14px;padding:9px 12px;border-radius:9px;background:#ff5f5f12;color:#ff9d9d;font-size:13px}
-    .mh-content{display:grid;grid-template-columns:minmax(260px,.8fr) minmax(390px,1.35fr);gap:28px;align-items:start}.mh-library{min-width:0}.mh-tabs{display:flex;align-items:center;gap:6px;margin-bottom:9px}.mh-tab{border:0;background:transparent;color:var(--text-muted,#999);font:inherit;font-weight:700;padding:7px 9px;border-radius:8px;cursor:pointer}.mh-tab.active{background:#ffffff0e;color:inherit}.mh-count{margin-left:auto;color:var(--text-muted,#888);font-size:12px}.mh-list,.mh-queue{max-height:410px;margin:0;padding:0;list-style:none;overflow:auto}.mh-empty{margin:0;padding:28px 8px;color:var(--text-muted,#999);font-size:13px;line-height:1.5}
+    .mh-content{display:grid;grid-template-columns:minmax(285px,.9fr) minmax(380px,1.25fr);gap:22px;align-items:start}.mh-library{min-width:0}.mh-tabs{display:flex;align-items:center;gap:6px;margin-bottom:9px}.mh-tab{border:0;background:transparent;color:var(--text-muted,#999);font:inherit;font-weight:700;padding:7px 9px;border-radius:8px;cursor:pointer}.mh-tab.active{background:#ffffff0e;color:inherit}.mh-count{margin-left:auto;color:var(--text-muted,#888);font-size:12px}.mh-list,.mh-queue{max-height:410px;margin:0;padding:0;list-style:none;overflow:auto}.mh-empty{margin:0;padding:28px 8px;color:var(--text-muted,#999);font-size:13px;line-height:1.5}
     .mh-result{display:grid;grid-template-columns:66px minmax(0,1fr) 30px;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer}.mh-result:hover,.mh-result.active,.mh-queue-row:hover,.mh-queue-row.active{background:#ffffff0b}.mh-result img{width:66px;height:42px;border-radius:7px;object-fit:cover}.mh-copy{display:grid;min-width:0;gap:2px}.mh-copy>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-copy strong{font-size:13px}.mh-copy span{color:var(--text-muted,#999);font-size:12px}.mh-plus,.mh-remove{border:0;background:#ffffff0c;color:var(--text-muted,#aaa);cursor:pointer}.mh-plus{width:28px;height:28px;border-radius:8px;font-size:17px}.mh-plus:hover{background:var(--accent-color,#7166ff);color:#fff}
-    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) minmax(112px,auto) auto auto auto auto;gap:7px;margin-bottom:9px}.mh-mini{padding:7px 10px;border-radius:8px}.mh-mini.active{background:var(--accent-color,#7166ff);color:#fff}.mh-mix-style{max-width:150px;font-size:12px}.mh-queue-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 8px;border-radius:9px;cursor:pointer}.mh-queue-row span{color:var(--text-muted,#999);font-size:12px}.mh-queue-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.mh-remove{font-size:17px;border-radius:6px}
-    .mh-player{min-width:0}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px}.mh-player-label h2{margin:0;font-size:15px}.mh-player-label span{color:var(--text-muted,#888);font-size:11px}.mh-player-placeholder{min-height:250px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#ffffff08,#ffffff03);color:var(--text-muted,#999);font-size:13px;text-align:center;padding:25px}.mh-frame{height:260px;min-height:200px;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 16px 40px #0004}.mh-frame iframe{width:100%;height:100%;border:0;display:block}.mh-now{display:flex;gap:12px;align-items:center;padding:14px 2px}.mh-now img{width:46px;height:46px;border-radius:9px;object-fit:cover}.mh-now-copy{min-width:0}.mh-now h3{margin:0 0 3px;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-now p{margin:0;color:var(--text-muted,#999);font-size:12px}.mh-player-note{margin:0 2px;color:var(--text-muted,#777);font-size:11px}
+    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:7px;margin-bottom:9px}.mh-mini{padding:7px 10px;border-radius:8px}.mh-mini.active{background:var(--accent-color,#7166ff);color:#fff}.mh-mix-style{width:100%;font-size:12px}.mh-menu{position:relative}.mh-menu>summary{list-style:none}.mh-menu>summary::-webkit-details-marker{display:none}.mh-menu-panel{position:absolute;z-index:20;right:0;top:46px;width:205px;padding:8px;display:grid;gap:6px;border:1px solid #ffffff12;border-radius:12px;background:#17171d;box-shadow:0 16px 40px #0008}.mh-menu-panel .mh-select{width:100%}.mh-menu-panel .mh-btn{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;font-size:12px}.mh-menu-panel .mh-btn svg{width:16px;height:16px}.mh-queue-row{display:grid;grid-template-columns:25px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 8px;border-radius:9px;cursor:pointer}.mh-queue-row span{color:var(--text-muted,#999);font-size:12px}.mh-queue-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.mh-remove{font-size:17px;border-radius:6px}
+    .mh-player{min-width:0}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:2px 0 10px}.mh-player-label h2{margin:0;font-size:15px}.mh-player-label span{color:var(--text-muted,#888);font-size:11px}.mh-player-placeholder{min-height:225px;display:grid;place-items:center;border-radius:14px;background:linear-gradient(145deg,#ffffff08,#ffffff03);color:var(--text-muted,#999);font-size:13px;text-align:center;padding:25px}.mh-frame{height:230px;min-height:190px;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 16px 40px #0004}.mh-frame iframe{width:100%;height:100%;border:0;display:block}
     @media(max-width:780px){.mediahub{padding:20px}.mh-top{flex-wrap:wrap}.mh-search{order:3;flex:1 0 100%;margin-left:0}.mh-content{grid-template-columns:1fr}.mh-list,.mh-queue{max-height:280px}.mh-frame{height:230px}}
   `;
 
@@ -166,10 +166,17 @@
     deleteList.title = "Playlist löschen";
     newList.setAttribute("aria-label", "Neue Playlist");
     deleteList.setAttribute("aria-label", "Playlist löschen");
-    newList.append(icon("plus"));
-    deleteList.append(icon("trash"));
+    newList.append(icon("plus"), el("span", "", "Neue Playlist"));
+    deleteList.append(icon("trash"), el("span", "", "Playlist löschen"));
+    const menu = el("details", "mh-menu");
+    const menuToggle = el("summary", "mh-btn ghost mh-icon-btn", "•••");
+    menuToggle.title = "Playlist verwalten";
+    menuToggle.setAttribute("aria-label", "Playlist verwalten");
+    const menuPanel = el("div", "mh-menu-panel");
+    menuPanel.append(picker, newList, deleteList);
+    menu.append(menuToggle, menuPanel);
     const playlistBar = el("div", "mh-playlist-bar");
-    playlistBar.append(picker, mixStylePicker, mixButton, modeButton, newList, deleteList);
+    playlistBar.append(mixStylePicker, mixButton, modeButton, menu);
     const queue = el("ol", "mh-queue");
     const queueEmpty = el("p", "mh-empty", "Füge Treffer über das Plus zu deiner Playlist hinzu.");
     playlistView.append(playlistBar, queueEmpty, queue);
@@ -218,6 +225,7 @@
         picker.append(option);
       });
       deleteList.disabled = playlists.length === 1;
+      picker.hidden = playlists.length === 1;
       playlistTab.textContent = `Playlist${activePlaylist().items.length ? ` (${activePlaylist().items.length})` : ""}`;
     }
 
@@ -488,16 +496,6 @@
         const artist = decode(item.channel);
         await api?.reportProviderState?.(ID, { state: "loading", title, artist, artwork: item.thumbnail || null, videoId: item.id });
         post({ command: "load", videoId: item.id });
-        player.querySelector(".mh-now")?.remove();
-        player.querySelector(".mh-player-note")?.remove();
-        const now = el("div", "mh-now");
-        const image = document.createElement("img");
-        image.src = item.thumbnail || "";
-        image.alt = "";
-        const copy = el("div", "mh-now-copy");
-        copy.append(el("h3", "", title), el("p", "", artist));
-        now.append(image, copy);
-        player.append(now, el("p", "mh-player-note", "Steuerung über die untere WebRadio-Leiste."));
         renderResults(currentResults);
         renderQueue();
       } catch (err) {
@@ -641,6 +639,7 @@
     picker.addEventListener("change", () => {
       playlistId = picker.value;
       renderQueue();
+      menu.open = false;
     });
     mixStylePicker.addEventListener("change", () => {
       mixStyle = mixStylePicker.value;
@@ -674,6 +673,7 @@
       save();
       renderPicker();
       renderQueue();
+      menu.open = false;
     });
     deleteList.addEventListener("click", () => {
       if (playlists.length === 1 || !window.confirm(`Playlist „${activePlaylist().name}“ löschen?`)) return;
@@ -682,6 +682,7 @@
       save();
       renderPicker();
       renderQueue();
+      menu.open = false;
     });
 
     renderPicker();
