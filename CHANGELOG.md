@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.9.0 – 2026-10-01
+
+### Neues Erscheinungsbild
+
+- Eigenständige MediaHub-Marke ohne irreführenden „YouTube Music“-Schriftzug
+- Ausgewogenes Zwei-Flächen-Layout nach dem Vorbild moderner Musik-Clients
+- Playlist mit Coverbildern, Künstlerzeile und hervorgehobenem aktiven Titel
+- Neuer ruhiger Player-Leerzustand und harmonischere Größenverhältnisse
+- Dezente Oberflächen statt vieler einzelner Kästen und Rahmen
+
 ## 0.8.2 – 2026-10-01
 
 ### Oberfläche
