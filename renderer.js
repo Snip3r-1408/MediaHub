@@ -8,7 +8,20 @@
   const AUTO_MIX_KEY = "mediahub-auto-mix-v1";
   const MIX_STYLE_KEY = "mediahub-mix-style-v1";
   const GENRE_CACHE_KEY = "mediahub-genre-cache-v1";
+  const MIX_BUFFER_TARGET = 12;
+  const MIX_BUFFER_LOW_WATER = 5;
+  const MIX_SEARCH_TIMEOUT = 10000;
+  const YTMUSIC_REQUEST_TIMEOUT = 15000;
+  const YTMUSIC_RETRY_AFTER = 10000;
+  const MIX_MAX_QUERIES_PER_REFILL = 4;
+  const MIX_HISTORY_KEEP = 6;
   let disposeView = null;
+  let ytMusicClientPromise = null;
+  let ytMusicClientFrame = null;
+  let ytMusicClientOrigin = "";
+  let ytMusicRequestId = 0;
+  const ytMusicPending = new Map();
+  let ytMusicBridgeFailedAt = 0;
 
   const css = `
     .mediahub{min-height:100%;padding:22px 28px;color:var(--text-main,#f5f5f5);font-family:inherit;box-sizing:border-box}.mediahub *{box-sizing:border-box}
@@ -57,6 +70,96 @@
     return node.value;
   }
 
+  async function loadYtMusicClient() {
+    if (!window.pluginHttpAPI?.getAssetUrl) return null;
+    if (ytMusicBridgeFailedAt && Date.now() - ytMusicBridgeFailedAt < YTMUSIC_RETRY_AFTER) return null;
+    if (ytMusicClientFrame?.contentWindow) return ytMusicClientFrame;
+    if (ytMusicClientPromise) return ytMusicClientPromise;
+    ytMusicClientPromise = (async () => {
+      try {
+        const assetUrl = await window.pluginHttpAPI.getAssetUrl(ID, "ytmusic-client.html");
+        const origin = new URL(assetUrl).origin;
+        const iframe = document.createElement("iframe");
+        iframe.hidden = true;
+        iframe.title = "MediaHub YouTube Music Engine";
+        iframe.setAttribute("aria-hidden", "true");
+        iframe.src = `${assetUrl}?t=${Date.now()}`;
+        await new Promise((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error("YouTube-Music-Client konnte nicht geladen werden")), 5000);
+          iframe.addEventListener("load", () => {
+            window.clearTimeout(timer);
+            resolve();
+          }, { once: true });
+          iframe.addEventListener("error", () => {
+            window.clearTimeout(timer);
+            reject(new Error("YouTube-Music-Client konnte nicht geladen werden"));
+          }, { once: true });
+          document.body.appendChild(iframe);
+        });
+        ytMusicClientFrame = iframe;
+        ytMusicClientOrigin = origin;
+        ytMusicBridgeFailedAt = 0;
+        return iframe;
+      } catch {
+        ytMusicBridgeFailedAt = Date.now();
+        return null;
+      }
+    })().finally(() => { ytMusicClientPromise = null; });
+    return ytMusicClientPromise;
+  }
+
+  async function ytMusicRequest(route, payload) {
+    const iframe = await loadYtMusicClient();
+    if (!iframe?.contentWindow) return null;
+    const requestId = `${Date.now()}-${++ytMusicRequestId}`;
+    return new Promise(resolve => {
+      const timer = window.setTimeout(() => {
+        ytMusicPending.delete(requestId);
+        ytMusicBridgeFailedAt = Date.now();
+        resolve(null);
+      }, YTMUSIC_REQUEST_TIMEOUT);
+      ytMusicPending.set(requestId, { resolve, timer });
+      iframe.contentWindow.postMessage({
+        source: "mediahub-ytmusic-parent",
+        requestId,
+        route,
+        payload
+      }, ytMusicClientOrigin);
+    });
+  }
+
+  window.addEventListener("message", event => {
+    if (event.source !== ytMusicClientFrame?.contentWindow
+      || event.origin !== ytMusicClientOrigin
+      || event.data?.source !== "mediahub-ytmusic-client") return;
+    const pending = ytMusicPending.get(String(event.data.requestId || ""));
+    if (!pending) return;
+    ytMusicPending.delete(String(event.data.requestId));
+    window.clearTimeout(pending.timer);
+    if (!event.data.ok) ytMusicBridgeFailedAt = Date.now();
+    pending.resolve(event.data.ok && Array.isArray(event.data.result) ? event.data.result : null);
+  });
+
+  function ytMusicSearch(query, limit = 20) {
+    return ytMusicRequest("/v1/search", { query, limit });
+  }
+
+  function ytMusicRadio(videoId, limit = 30) {
+    return videoId ? ytMusicRequest("/v1/radio", { videoId, limit }) : Promise.resolve(null);
+  }
+
+  function disposeYtMusicClient() {
+    ytMusicClientFrame?.remove();
+    ytMusicClientFrame = null;
+    ytMusicClientOrigin = "";
+    ytMusicClientPromise = null;
+    for (const pending of ytMusicPending.values()) {
+      window.clearTimeout(pending.timer);
+      pending.resolve(null);
+    }
+    ytMusicPending.clear();
+  }
+
   function loadPlaylists() {
     try {
       const stored = JSON.parse(localStorage.getItem(STORE_KEY) || "[]");
@@ -84,6 +187,8 @@
     let currentResults = [];
     let frame = null;
     let frameOrigin = null;
+    let frameLoadPromise = null;
+    let playerReady = false;
     let currentTab = "results";
     let playMode = localStorage.getItem(MODE_KEY) || "once";
     let autoMix = localStorage.getItem(AUTO_MIX_KEY) === "true";
@@ -93,8 +198,24 @@
     const playedVideoIds = new Set();
     let mixRound = 0;
     let advancing = false;
+    let activeAdvanceToken = 0;
+    let advanceQueuedToken = 0;
     let blockedRecoveries = 0;
     let lastGenreRequest = 0;
+    let mixRefillPromise = null;
+    let mixRefillGeneration = 0;
+    let mixRetryTimer = null;
+    let mixRetryAttempt = 0;
+    let mixResumePending = null;
+    let mixGeneration = 0;
+    let disposed = false;
+    let playbackToken = 0;
+    let transitionedToken = 0;
+    let playbackWatchdogTimer = null;
+    let stoppedByUser = false;
+    let transitionGeneration = 0;
+    const playHistory = [];
+    let mixSource = "Magischer Mix";
     let genreCache = {};
     try { genreCache = JSON.parse(localStorage.getItem(GENRE_CACHE_KEY) || "{}"); } catch { genreCache = {}; }
 
@@ -184,7 +305,8 @@
     library.append(tabs, resultsView, playlistView);
 
     const playerLabel = el("div", "mh-player-label");
-    playerLabel.append(el("h2", "", "Aktueller Titel"), el("span", "", "MediaHub Player"));
+    const playerStatus = el("span", "", "MediaHub Player");
+    playerLabel.append(el("h2", "", "Aktueller Titel"), playerStatus);
     const playerHost = el("div", "mh-player-placeholder");
     const playerEmpty = el("div", "mh-player-empty");
     playerEmpty.append(el("div", "mh-player-empty-mark", "♪"), el("span", "", "Wähle einen Titel aus"));
@@ -250,6 +372,7 @@
         ? "Auto-Mix ist an: passende Musik wird automatisch ergänzt"
         : "Auto-Mix einschalten";
       mixButton.classList.toggle("active", autoMix);
+      refreshMixStatus();
     }
 
     function renderQueue() {
@@ -273,6 +396,7 @@
           save();
           renderPicker();
           renderQueue();
+          if (autoMix) ensureMixBuffer().catch(() => scheduleMixRetry());
         });
         row.append(remove);
         row.addEventListener("click", () => play(item));
@@ -287,18 +411,41 @@
         list.items.push(item);
         save();
         renderQueue();
+        if (autoMix) ensureMixBuffer().catch(() => scheduleMixRetry());
       }
     }
 
     function forgetBlockedItem(videoId) {
       if (!videoId) return;
-      playlists.forEach(list => {
-        list.items = list.items.filter(item => item.id !== videoId);
-      });
+      const list = activePlaylist();
+      const blocked = list.items.find(item => item.id === videoId);
+      if (blocked) blocked.mediaHubUnavailable = true;
       currentResults = currentResults.filter(item => item.id !== videoId);
       save();
       renderResults(currentResults);
       renderQueue();
+    }
+
+    function compactAutoMixQueue() {
+      if (!autoMix || !selected?.id) return;
+      const list = activePlaylist();
+      const currentIndex = list.items.findIndex(item => item.id === selected.id);
+      if (currentIndex <= MIX_HISTORY_KEEP) return;
+      const expiredIds = new Set(
+        list.items
+          .slice(0, currentIndex - MIX_HISTORY_KEEP)
+          .filter(item => item.mediaHubAutoAdded)
+          .map(item => item.id)
+      );
+      if (!expiredIds.size) return;
+      list.items = list.items.filter(item => !expiredIds.has(item.id));
+      save();
+    }
+
+    function leastRecentlyPlayed(items) {
+      const candidates = items.filter(item => item.id !== selected?.id);
+      if (!candidates.length) return items[0] || null;
+      return candidates.sort((left, right) => playHistory.lastIndexOf(left.id) - playHistory.lastIndexOf(right.id))[0];
     }
 
     function artistKey(item) {
@@ -354,7 +501,10 @@
     async function findGenres(artist) {
       const key = artist.toLocaleLowerCase();
       const cached = genreCache[key];
-      if (cached?.tags?.length && Date.now() - cached.savedAt < 30 * 24 * 60 * 60 * 1000) return cached.tags;
+      const cacheAge = Date.now() - Number(cached?.savedAt || 0);
+      if (cached && cacheAge < (cached.tags?.length ? 30 * 24 * 60 * 60 * 1000 : 60 * 60 * 1000)) {
+        return cached.tags || [];
+      }
       const wait = Math.max(0, 1100 - (Date.now() - lastGenreRequest));
       if (wait) await new Promise(resolve => window.setTimeout(resolve, wait));
       lastGenreRequest = Date.now();
@@ -375,19 +525,20 @@
           .map(tag => cleanArtist(tag.name).toLowerCase())
           .filter((tag, index, all) => tag && !["seen live", "favorites", "american"].includes(tag) && all.indexOf(tag) === index)
           .slice(0, 5);
-        if (tags.length) {
-          genreCache[key] = { tags, savedAt: Date.now() };
-          localStorage.setItem(GENRE_CACHE_KEY, JSON.stringify(genreCache));
-        }
+        genreCache[key] = { tags, savedAt: Date.now() };
+        localStorage.setItem(GENRE_CACHE_KEY, JSON.stringify(genreCache));
         return tags;
+      } catch (error) {
+        genreCache[key] = { tags: [], savedAt: Date.now() };
+        localStorage.setItem(GENRE_CACHE_KEY, JSON.stringify(genreCache));
+        throw error;
       } finally {
         window.clearTimeout(timer);
       }
     }
 
-    async function mixQueries(item, fallback = "") {
+    async function mixQueries(item, fallback = "", offset = mixRound) {
       const artist = seedArtist(item, fallback);
-      if (mixStyle === "related") return [`${artist || fallback} ähnliche Künstler Musik`];
       let tags = [];
       if (artist) {
         try { tags = await findGenres(artist); } catch { /* local fallback below */ }
@@ -397,54 +548,251 @@
         if (/(metal|metalcore|falling in reverse)/.test(hint)) tags = ["metalcore", "post-hardcore", "alternative metal"];
         else if (/(rock|punk|emo)/.test(hint)) tags = ["alternative rock", "pop punk"];
       }
-      if (!tags.length) return [`${artist || fallback} ähnliche Künstler Musik`];
-      const chosen = mixStyle === "wide" ? broadGenre(tags) : tags.slice(0, 3);
-      if (mixStyle === "surprise") {
-        const tag = chosen[Math.floor(Math.random() * chosen.length)];
-        return [`${tag} neuer Song official video`, `${tag} Geheimtipp official audio`, `${tag} neue Band Song`];
+      const chosen = (mixStyle === "wide" ? broadGenre(tags) : tags).filter(Boolean);
+      const primary = chosen[0] || "alternative music";
+      const secondary = chosen[1] || primary;
+      let queries;
+      if (mixStyle === "related") {
+        queries = [
+          `${artist || fallback} ähnliche Künstler official music video`,
+          `${primary} Bands wie ${artist || fallback} official audio`,
+          `${primary} neue Bands official music video`,
+          `${secondary} underrated bands official audio`,
+          `${primary} rising artists song`,
+          `${primary} essential songs official video`,
+          `${secondary} new release official audio`,
+          `${primary} alternative bands song`
+        ];
+      } else if (mixStyle === "surprise") {
+        queries = [
+          `${primary} Geheimtipp official audio`,
+          `${secondary} neue Band Song`,
+          `${primary} underrated official music video`,
+          `${secondary} rising artists official audio`,
+          `${primary} hidden gems song`,
+          `${secondary} new release official video`,
+          `${primary} independent bands music video`,
+          `${secondary} discovery song official audio`
+        ];
+      } else {
+        queries = [
+          `${primary} official music video`,
+          `${secondary} Bands official audio`,
+          `${primary} neue Bands official video`,
+          `${secondary} underrated song`,
+          `${primary} rising artists official audio`,
+          `${primary} ${secondary} new release`,
+          `${secondary} essential songs official video`,
+          `${primary} alternative bands official audio`,
+          `${secondary} hidden gems music video`,
+          `${primary} modern bands song`
+        ];
       }
-      return [
-        `${chosen.slice(0, 2).join(" ")} official music video`,
-        `${chosen[0]} ähnliche Bands official audio`,
-        `${chosen.slice(0, 3).join(" ")} einzelner Song`
+      const generation = offset;
+      const discoveries = ["new release", "hidden gems", "deep cuts", "underground", "rising artists", "fan favorite", "essential songs", "fresh bands"];
+      const moods = ["energetic", "melodic", "heavy", "emotional", "anthemic", "dark", "powerful", "modern"];
+      const year = new Date().getFullYear() - (generation % 6);
+      const letter = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[generation % 26];
+      const changing = [
+        `${primary} ${discoveries[generation % discoveries.length]} ${year} official audio`,
+        `${secondary} ${moods[generation % moods.length]} bands official music video`,
+        `${primary} bands ${letter} official audio`,
+        `${secondary} ${discoveries[(generation + 3) % discoveries.length]} song`
       ];
+      const stable = [...new Set(queries.map(query => query.replace(/\s+/g, " ").trim()).filter(Boolean))];
+      const start = stable.length ? offset % stable.length : 0;
+      const rotated = stable.slice(start).concat(stable.slice(0, start));
+      const interleaved = [];
+      for (let index = 0; index < Math.max(changing.length, rotated.length); index += 1) {
+        if (changing[index]) interleaved.push(changing[index]);
+        if (rotated[index]) interleaved.push(rotated[index]);
+      }
+      return [...new Set(interleaved.map(query => query.replace(/\s+/g, " ").trim()).filter(Boolean))];
     }
 
-    function mergeIntoPlaylist(items, limit = 8, maxPerArtist = 2) {
-      const list = activePlaylist();
+    function songKey(item) {
+      return decode(item?.title || "")
+        .toLocaleLowerCase()
+        .replace(/\([^)]*(?:official|video|audio|lyrics?|visuali[sz]er|live)[^)]*\)/gi, " ")
+        .replace(/\[[^\]]*(?:official|video|audio|lyrics?|visuali[sz]er|live)[^\]]*\]/gi, " ")
+        .replace(/\b(?:official|music|video|audio|lyrics?|hd|4k)\b/gi, " ")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+    }
+
+    function mergeIntoPlaylist(items, limit = 8, maxPerArtist = 2, list = activePlaylist()) {
       const known = new Set(list.items.map(item => item.id));
+      const knownSongs = new Set(list.items.map(songKey).filter(Boolean));
       const artistCounts = new Map();
-      list.items.forEach(item => {
+      list.items.slice(-10).forEach(item => {
         const key = artistKey(item);
         if (key) artistCounts.set(key, (artistCounts.get(key) || 0) + 1);
       });
       const additions = [];
       for (const item of items) {
         if (!item?.id || known.has(item.id) || failedVideoIds.has(item.id) || isLongForm(item)) continue;
+        const titleKey = songKey(item);
+        if (titleKey && knownSongs.has(titleKey)) continue;
         const key = artistKey(item);
         if (key && (artistCounts.get(key) || 0) >= maxPerArtist) continue;
-        additions.push(item);
+        const addition = { ...item, mediaHubAutoAdded: true };
+        additions.push(addition);
         known.add(item.id);
+        if (titleKey) knownSongs.add(titleKey);
         if (key) artistCounts.set(key, (artistCounts.get(key) || 0) + 1);
         if (additions.length >= limit) break;
       }
       if (!additions.length) return [];
       list.items.push(...additions);
       save();
-      renderQueue();
+      if (list.id === playlistId) renderQueue();
       return additions;
     }
 
     async function fillGenreMix(seed, firstResults = []) {
       const additions = mergeIntoPlaylist(firstResults, 4, 2);
-      if (!seed || additions.length >= 8) return additions;
-      const queries = await mixQueries(firstResults[0], seed);
-      for (const query of queries) {
-        const related = await auth.search(query);
-        additions.push(...mergeIntoPlaylist(related, 8 - additions.length, 2));
-        if (additions.length >= 8) break;
-      }
+      if (!seed || additions.length >= MIX_BUFFER_TARGET) return additions;
+      additions.push(...await ensureMixBuffer({ force: true, seedItem: firstResults[0] }));
       return additions;
+    }
+
+    function isPlayable(item) {
+      return Boolean(item?.id) && !item.mediaHubUnavailable && !failedVideoIds.has(item.id) && !isLongForm(item);
+    }
+
+    function playableQueue() {
+      return activePlaylist().items.filter(isPlayable);
+    }
+
+    function upcomingQueue() {
+      const pool = playableQueue();
+      const index = pool.findIndex(item => item.id === selected?.id);
+      const upcoming = index >= 0 ? pool.slice(index + 1) : pool.filter(item => item.id !== selected?.id);
+      return playMode === "shuffle"
+        ? upcoming.filter(item => !playedVideoIds.has(item.id))
+        : upcoming;
+    }
+
+    function refreshMixStatus(text = "") {
+      if (text) {
+        playerStatus.textContent = text;
+      } else if (autoMix) {
+        playerStatus.textContent = `${mixSource} · ${upcomingQueue().length} voraus`;
+      } else {
+        playerStatus.textContent = "MediaHub Player";
+      }
+    }
+
+    async function searchSongs(query) {
+      const enhanced = await ytMusicSearch(query, 20);
+      if (enhanced?.length) return enhanced;
+      return auth.search(query);
+    }
+
+    function searchWithTimeout(query) {
+      return new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => reject(new Error("YouTube-Suche hat zu lange gebraucht.")), MIX_SEARCH_TIMEOUT);
+        Promise.resolve()
+          .then(() => searchSongs(query))
+          .then(resolve, reject)
+          .finally(() => window.clearTimeout(timer));
+      });
+    }
+
+    function clearMixRetry() {
+      if (mixRetryTimer) window.clearTimeout(mixRetryTimer);
+      mixRetryTimer = null;
+    }
+
+    function scheduleMixRetry() {
+      if (!autoMix || disposed || mixRetryTimer) return;
+      const delays = [5000, 15000, 30000, 60000, 180000, 300000];
+      const delay = delays[Math.min(mixRetryAttempt, delays.length - 1)];
+      const retryGeneration = mixGeneration;
+      mixRetryAttempt += 1;
+      refreshMixStatus(`Mix wartet · neuer Versuch in ${Math.ceil(delay / 1000)} s`);
+      mixRetryTimer = window.setTimeout(() => {
+        mixRetryTimer = null;
+        if (retryGeneration !== mixGeneration || !autoMix || disposed) return;
+        ensureMixBuffer({ force: true }).then(additions => {
+          const resume = mixResumePending;
+          if (resume
+            && resume.token === playbackToken
+            && resume.videoId === selected?.id
+            && resume.playlistId === playlistId
+            && (additions.length || upcomingQueue().length)) {
+            advancePlayback(resume.token);
+          }
+        }).catch(() => scheduleMixRetry());
+      }, delay);
+    }
+
+    async function ensureMixBuffer({ force = false, seedItem = null } = {}) {
+      if (!autoMix || !auth?.search || disposed) return [];
+      if (!force && mixRetryTimer) return [];
+      const remaining = upcomingQueue().length;
+      if (!force && remaining > MIX_BUFFER_LOW_WATER) {
+        refreshMixStatus();
+        return [];
+      }
+      if (mixRefillPromise) {
+        if (mixRefillGeneration !== mixGeneration) {
+          return mixRefillPromise.then(() => ensureMixBuffer({ force, seedItem }));
+        }
+        return mixRefillPromise;
+      }
+      const wanted = Math.max(1, MIX_BUFFER_TARGET - remaining);
+      const refillGeneration = mixGeneration;
+      const targetPlaylist = activePlaylist();
+      const targetPlaylistId = playlistId;
+      mixRefillGeneration = refillGeneration;
+      refreshMixStatus("Magischer Mix lädt …");
+      mixRefillPromise = (async () => {
+        const additions = [];
+        const refillStarted = Date.now();
+        const seed = seedItem || selected || targetPlaylist.items.at(-1) || currentResults[0];
+        const recentIds = new Set(playHistory.slice(-MIX_HISTORY_KEEP));
+        const radioSeeds = [
+          seed,
+          ...targetPlaylist.items.filter(item => recentIds.has(item.id)).reverse()
+        ].filter((item, index, all) => item?.id && all.findIndex(candidate => candidate?.id === item.id) === index);
+        const radioSeed = radioSeeds.length ? radioSeeds[mixRound % radioSeeds.length] : null;
+        mixRound = (mixRound + 1) % 100000;
+        try {
+          const radioTracks = await ytMusicRadio(radioSeed?.id, Math.max(25, wanted * 2));
+          if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
+          if (radioTracks?.length) {
+            additions.push(...mergeIntoPlaylist(radioTracks, wanted, 2, targetPlaylist));
+            if (additions.length) mixSource = "YouTube Music Radio";
+          }
+        } catch { /* use the classic genre search below */ }
+        if (additions.length >= wanted) return additions;
+        const queries = await mixQueries(seed, lastSearchQuery || input.value.trim(), mixRound);
+        for (let attempt = 0; attempt < Math.min(queries.length, MIX_MAX_QUERIES_PER_REFILL) && additions.length < wanted; attempt += 1) {
+          if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) break;
+          if (attempt >= 2 && Date.now() - refillStarted > 25000) break;
+          const query = queries[attempt];
+          mixRound = (mixRound + 1) % 100000;
+          try {
+            const suggestions = await searchWithTimeout(query);
+            if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) break;
+            additions.push(...mergeIntoPlaylist(suggestions || [], wanted - additions.length, 2, targetPlaylist));
+            if (additions.length && mixSource !== "YouTube Music Radio") mixSource = "Magischer Mix";
+          } catch { /* rotate to the next independent query */ }
+        }
+        if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
+        if (additions.length) {
+          mixRetryAttempt = 0;
+          clearMixRetry();
+        } else if (upcomingQueue().length <= MIX_BUFFER_LOW_WATER) {
+          scheduleMixRetry();
+        }
+        return additions;
+      })().finally(() => {
+        mixRefillPromise = null;
+        if (!mixRetryTimer) refreshMixStatus();
+      });
+      return mixRefillPromise;
     }
 
     function renderResults(items) {
@@ -474,120 +822,255 @@
       });
     }
 
+    function clearPlaybackWatchdog() {
+      if (playbackWatchdogTimer) window.clearTimeout(playbackWatchdogTimer);
+      playbackWatchdogTimer = null;
+    }
+
+    function armPlaybackWatchdog(token, videoId) {
+      clearPlaybackWatchdog();
+      playbackWatchdogTimer = window.setTimeout(() => {
+        playbackWatchdogTimer = null;
+        if (disposed || token !== playbackToken || selected?.id !== videoId || transitionedToken === token) return;
+        if (!playerReady) {
+          showError("Der YouTube-Player konnte nicht gestartet werden. Bitte versuche den Titel erneut.");
+          frame?.remove();
+          frame = null;
+          frameOrigin = null;
+          playerHost.className = "mh-player-placeholder";
+          playerHost.replaceChildren(playerEmpty);
+          api?.reportProviderState?.(ID, { state: "stopped" });
+          return;
+        }
+        failedVideoIds.add(videoId);
+        showError("Dieser Titel startet nicht – MediaHub wechselt automatisch …");
+        transitionedToken = token;
+        advancePlayback(token);
+      }, 25000);
+    }
+
     async function ensurePlayer() {
+      if (frameLoadPromise) return frameLoadPromise;
       if (frame) return;
-      const url = await window.pluginHttpAPI?.getAssetUrl(ID, "player.html");
-      if (!url) throw new Error("Der lokale MediaHub-Player konnte nicht geladen werden.");
-      frameOrigin = new URL(url).origin;
-      const wrap = el("div", "mh-frame");
-      frame = document.createElement("iframe");
-      frame.title = "MediaHub YouTube-Player";
-      frame.allow = "autoplay; encrypted-media; picture-in-picture";
-      frame.src = url;
-      wrap.append(frame);
-      playerHost.className = "";
-      playerHost.replaceChildren(wrap);
-      await new Promise((resolve, reject) => {
-        frame.addEventListener("load", resolve, { once: true });
-        frame.addEventListener("error", () => reject(new Error("Der Player konnte nicht geöffnet werden.")), { once: true });
-      });
+      frameLoadPromise = (async () => {
+        const url = await window.pluginHttpAPI?.getAssetUrl(ID, "player.html");
+        if (!url) throw new Error("Der lokale MediaHub-Player konnte nicht geladen werden.");
+        frameOrigin = new URL(url).origin;
+        playerReady = false;
+        const wrap = el("div", "mh-frame");
+        frame = document.createElement("iframe");
+        frame.title = "MediaHub YouTube-Player";
+        frame.allow = "autoplay; encrypted-media; picture-in-picture";
+        frame.src = url;
+        wrap.append(frame);
+        playerHost.className = "";
+        playerHost.replaceChildren(wrap);
+        await new Promise((resolve, reject) => {
+          const timer = window.setTimeout(() => reject(new Error("Der Player antwortet nicht.")), 10000);
+          frame.addEventListener("load", () => {
+            window.clearTimeout(timer);
+            resolve();
+          }, { once: true });
+          frame.addEventListener("error", () => {
+            window.clearTimeout(timer);
+            reject(new Error("Der Player konnte nicht geöffnet werden."));
+          }, { once: true });
+        });
+      })();
+      try {
+        await frameLoadPromise;
+      } catch (error) {
+        frame?.remove();
+        frame = null;
+        frameOrigin = null;
+        playerReady = false;
+        playerHost.className = "mh-player-placeholder";
+        playerHost.replaceChildren(playerEmpty);
+        throw error;
+      } finally {
+        frameLoadPromise = null;
+      }
     }
 
     async function play(item) {
+      if (!item?.id) return false;
+      const playGeneration = ++transitionGeneration;
+      const token = ++playbackToken;
       selected = item;
+      stoppedByUser = false;
+      mixResumePending = null;
+      clearPlaybackWatchdog();
       playedVideoIds.add(item.id);
+      playHistory.push(item.id);
+      while (playedVideoIds.size > 40) playedVideoIds.delete(playedVideoIds.values().next().value);
+      if (playHistory.length > 80) playHistory.splice(0, playHistory.length - 80);
+      compactAutoMixQueue();
       showError("");
       try {
         const activation = await api?.setActiveProvider?.(ID);
+        if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         if (activation?.ok === false) throw new Error(activation.error?.message || "MediaHub konnte nicht aktiviert werden.");
         await ensurePlayer();
+        if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         const title = decode(item.title);
         const artist = decode(item.channel);
-        await api?.reportProviderState?.(ID, { state: "loading", title, artist, artwork: item.thumbnail || null, videoId: item.id });
-        post({ command: "load", videoId: item.id });
+        post({ command: "load", videoId: item.id, token });
+        armPlaybackWatchdog(token, item.id);
+        try {
+          Promise.resolve(api?.reportProviderState?.(ID, { state: "loading", title, artist, artwork: item.thumbnail || null, videoId: item.id })).catch(() => {});
+        } catch { /* playback remains usable when status reporting fails */ }
         renderResults(currentResults);
         renderQueue();
+        ensureMixBuffer().catch(() => scheduleMixRetry());
+        return true;
       } catch (err) {
-        showError(err.message || "Die Wiedergabe konnte nicht gestartet werden.");
+        if (token === playbackToken && !disposed) showError(err.message || "Die Wiedergabe konnte nicht gestartet werden.");
+        return false;
       }
     }
 
-    async function advancePlayback() {
-      if (advancing) return;
-      advancing = true;
-      try {
-      let pool = activePlaylist().items.filter(item => !failedVideoIds.has(item.id) && !isLongForm(item));
-      if (!pool.length) pool = currentResults.filter(item => !failedVideoIds.has(item.id) && !isLongForm(item));
-      const index = pool.findIndex(item => item.id === selected?.id);
-      let next = null;
-      if (playMode === "shuffle" && pool.length) {
+    function nextQueueItem(pool) {
+      if (playMode === "shuffle") {
         const choices = pool.filter(item => item.id !== selected?.id && !playedVideoIds.has(item.id));
-        if (choices.length) next = choices[Math.floor(Math.random() * choices.length)];
-      } else if (pool[index + 1]) {
-        next = pool[index + 1];
+        return choices.length ? choices[Math.floor(Math.random() * choices.length)] : null;
       }
+      const items = activePlaylist().items;
+      const index = items.findIndex(item => item.id === selected?.id);
+      if (index < 0) return pool.find(item => item.id !== selected?.id) || null;
+      return items.slice(index + 1).find(isPlayable) || null;
+    }
 
-      if (!next && autoMix && auth?.search) {
-        const original = (lastSearchQuery || input.value).trim();
-        try {
-          const searches = await mixQueries(selected, original);
-          for (let attempt = 0; attempt < searches.length && !next; attempt += 1) {
-            const query = searches[(mixRound + attempt) % searches.length];
-            const suggestions = await auth.search(query);
-            const additions = mergeIntoPlaylist(suggestions, 8, 2);
-            if (additions.length) {
-              mixRound = (mixRound + attempt + 1) % searches.length;
-              next = playMode === "shuffle"
-                ? additions[Math.floor(Math.random() * additions.length)]
-                : additions[0];
-            }
-          }
-        } catch (err) {
-          showError(err.message || "Auto-Mix konnte keine weitere Musik laden.");
+    async function advancePlayback(expectedToken = playbackToken) {
+      if (disposed || expectedToken !== playbackToken) return;
+      if (advancing) {
+        if (expectedToken !== activeAdvanceToken) advanceQueuedToken = expectedToken;
+        return;
+      }
+      advancing = true;
+      activeAdvanceToken = expectedToken;
+      const advanceGeneration = transitionGeneration;
+      clearPlaybackWatchdog();
+      try {
+        let pool = playableQueue();
+        let next = nextQueueItem(pool);
+
+        if (!next && autoMix && auth?.search) {
+          mixResumePending = { token: expectedToken, videoId: selected?.id, playlistId };
+          if (!mixRetryTimer) await ensureMixBuffer({ force: true });
+          if (expectedToken !== playbackToken || advanceGeneration !== transitionGeneration || disposed) return;
+          pool = playableQueue();
+          next = nextQueueItem(pool);
         }
-      }
 
-      if (!next && playMode === "repeat" && pool.length) next = pool[0];
-      if (!next && playMode === "shuffle" && pool.length) {
-        playedVideoIds.clear();
-        next = pool[Math.floor(Math.random() * pool.length)];
-      }
-      if (next) await play(next);
-      else api?.reportProviderState?.(ID, { state: "stopped" });
+        if (!next && autoMix && pool.length) next = leastRecentlyPlayed(pool);
+        if (!next && autoMix) {
+          const resultPool = currentResults.filter(isPlayable);
+          if (resultPool.length) next = leastRecentlyPlayed(resultPool);
+        }
+        if (!next && playMode === "repeat" && pool.length) next = pool[0];
+        if (!next && playMode === "shuffle" && pool.length) {
+          playedVideoIds.clear();
+          next = pool.find(item => item.id !== selected?.id) || pool[0];
+        }
+        if (next) {
+          if (expectedToken !== playbackToken || advanceGeneration !== transitionGeneration || disposed) return;
+          mixResumePending = null;
+          const started = await play(next);
+          if (!started && selected?.id === next.id && !disposed) {
+            mixResumePending = null;
+            api?.reportProviderState?.(ID, { state: "stopped" });
+          }
+        } else if (autoMix) {
+          scheduleMixRetry();
+          refreshMixStatus("Magischer Mix sucht weiter …");
+        } else {
+          mixResumePending = null;
+          api?.reportProviderState?.(ID, { state: "stopped" });
+        }
       } finally {
         advancing = false;
+        activeAdvanceToken = 0;
+        const queuedToken = advanceQueuedToken;
+        advanceQueuedToken = 0;
+        if (queuedToken && queuedToken === playbackToken) {
+          window.setTimeout(() => advancePlayback(queuedToken), 0);
+        }
       }
     }
 
     function receivePlayerMessage(event) {
       if (event.source !== frame?.contentWindow || event.data?.source !== "mediahub-player") return;
+      const eventToken = Number(event.data.token || 0);
+      if (event.data.type === "ready") {
+        playerReady = true;
+        return;
+      }
+      if (event.data.type !== "ready"
+        && (eventToken !== playbackToken || event.data.videoId !== selected?.id)) return;
       if (event.data.type === "error") {
+        clearPlaybackWatchdog();
         const code = Number(event.data.code);
-        if ([101, 150].includes(code)) {
+        if ([2, 5, 100, 101, 150].includes(code)) {
           const blockedId = selected?.id;
           if (blockedId) {
             failedVideoIds.add(blockedId);
             forgetBlockedItem(blockedId);
           }
           blockedRecoveries += 1;
-          const canContinue = blockedRecoveries <= 8 && (autoMix || activePlaylist().items.length || currentResults.length);
+          const canContinue = autoMix || playableQueue().length || currentResults.length;
           showError(canContinue
             ? "Diese Version ist gesperrt – MediaHub sucht automatisch die nächste passende Version …"
             : "Mehrere YouTube-Versionen sind für externe Player gesperrt. Bitte starte eine neue Suche.");
-          if (canContinue) window.setTimeout(() => advancePlayback(), 350);
+          if (canContinue && blockedRecoveries >= 8 && autoMix) {
+            mixRound += MIX_MAX_QUERIES_PER_REFILL;
+            mixResumePending = { token: playbackToken, videoId: selected?.id, playlistId };
+            transitionedToken = playbackToken;
+            blockedRecoveries = 0;
+            showError("Viele Versionen sind gesperrt – MediaHub wechselt die Suche und versucht es gleich erneut …");
+            scheduleMixRetry();
+          } else if (canContinue && transitionedToken !== playbackToken) {
+            transitionedToken = playbackToken;
+            advancePlayback(eventToken);
+          }
+        } else if (code === 153) {
+          showError("YouTube-Player-Fehler 153: WebRadio übermittelt keine gültige Player-Identität.");
         } else {
           showError(`YouTube-Player-Fehler: ${code}`);
         }
       }
-      if (event.data.type === "autoplay-blocked") showError("YouTube hat den automatischen Start blockiert. Bitte drücke unten auf Start.");
+      if (event.data.type === "autoplay-blocked") {
+        clearPlaybackWatchdog();
+        showError("YouTube hat den automatischen Start blockiert. Bitte drücke unten auf Start.");
+      }
+      if (event.data.type === "stalled") {
+        clearPlaybackWatchdog();
+        if (selected?.id) {
+          failedVideoIds.add(selected.id);
+          forgetBlockedItem(selected.id);
+        }
+        showError("Dieser Titel lädt nicht weiter – MediaHub wechselt automatisch …");
+        if (transitionedToken !== playbackToken) {
+          transitionedToken = playbackToken;
+          advancePlayback(eventToken);
+        }
+        return;
+      }
       if (event.data.type === "ended") {
-        advancePlayback();
+        clearPlaybackWatchdog();
+        if (transitionedToken !== playbackToken) {
+          transitionedToken = playbackToken;
+          advancePlayback(eventToken);
+        }
         return;
       }
       if (event.data.type === "state" && selected) {
+        if (["playing", "paused", "stopped"].includes(event.data.state)) clearPlaybackWatchdog();
+        if (event.data.state === "loading") armPlaybackWatchdog(playbackToken, selected.id);
         if (event.data.state === "playing") {
+          playerReady = true;
           blockedRecoveries = 0;
           showError("");
+          ensureMixBuffer().catch(() => scheduleMixRetry());
         }
         api?.reportProviderState?.(ID, {
           state: event.data.state,
@@ -601,7 +1084,33 @@
 
     window.addEventListener("message", receivePlayerMessage);
     const unsubscribe = api?.onCommand?.(message => {
-      if (message?.providerId === ID) post(message);
+      if (message?.providerId !== ID) return;
+      if (message.command === "stop") {
+        stoppedByUser = true;
+        transitionGeneration += 1;
+        advanceQueuedToken = 0;
+        mixResumePending = null;
+        mixGeneration += 1;
+        mixRetryAttempt = 0;
+        clearMixRetry();
+        clearPlaybackWatchdog();
+        transitionedToken = playbackToken;
+      } else if (message.command === "pause") {
+        clearPlaybackWatchdog();
+      } else if (message.command === "play" && selected?.id) {
+        if (stoppedByUser) {
+          transitionGeneration += 1;
+          advanceQueuedToken = 0;
+          transitionedToken = 0;
+          stoppedByUser = false;
+          post({ command: "load", videoId: selected.id, token: playbackToken });
+          armPlaybackWatchdog(playbackToken, selected.id);
+          return;
+        }
+        stoppedByUser = false;
+        armPlaybackWatchdog(playbackToken, selected.id);
+      }
+      post(message);
     });
 
     login.addEventListener("click", async () => {
@@ -623,12 +1132,18 @@
       const query = input.value.trim();
       if (!query) return;
       lastSearchQuery = query;
+      if (autoMix) {
+        mixGeneration += 1;
+        mixRound = 0;
+        mixRetryAttempt = 0;
+        clearMixRetry();
+      }
       search.disabled = true;
       search.replaceChildren();
       search.append(icon("search"));
       showError("");
       try {
-        const found = await auth.search(query);
+        const found = await searchSongs(query);
         renderResults(found);
         if (autoMix) {
           const additions = await fillGenreMix(query, found);
@@ -646,6 +1161,9 @@
     resultTab.addEventListener("click", () => setTab("results"));
     playlistTab.addEventListener("click", () => setTab("playlist"));
     picker.addEventListener("change", () => {
+      mixGeneration += 1;
+      mixResumePending = null;
+      clearMixRetry();
       playlistId = picker.value;
       renderQueue();
       menu.open = false;
@@ -653,10 +1171,11 @@
     mixStylePicker.addEventListener("change", () => {
       mixStyle = mixStylePicker.value;
       localStorage.setItem(MIX_STYLE_KEY, mixStyle);
+      mixGeneration += 1;
       mixRound = 0;
-      if (autoMix && selected) {
-        mixQueries(selected, lastSearchQuery || input.value.trim()).catch(() => {});
-      }
+      mixRetryAttempt = 0;
+      clearMixRetry();
+      if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
     modeButton.addEventListener("click", () => {
       playMode = playMode === "once" ? "repeat" : playMode === "repeat" ? "shuffle" : "once";
@@ -667,10 +1186,22 @@
       autoMix = !autoMix;
       localStorage.setItem(AUTO_MIX_KEY, String(autoMix));
       renderAutoMix();
-      if (autoMix && currentResults.length) {
+      if (!autoMix) {
+        mixResumePending = null;
+        mixGeneration += 1;
+        mixRetryAttempt = 0;
+        clearMixRetry();
+        refreshMixStatus();
+      } else {
+        mixGeneration += 1;
+        mixRetryAttempt = 0;
         fillGenreMix(lastSearchQuery || input.value.trim(), currentResults).then(additions => {
           if (!selected && (additions[0] || currentResults[0])) play(additions[0] || currentResults[0]);
-        }).catch(err => showError(err.message || "Auto-Mix konnte nicht ergänzt werden."));
+          ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
+        }).catch(err => {
+          showError(err.message || "Auto-Mix konnte nicht ergänzt werden.");
+          scheduleMixRetry();
+        });
       }
     });
     newList.addEventListener("click", () => {
@@ -678,20 +1209,28 @@
       if (!name?.trim()) return;
       const list = { id: `playlist-${Date.now()}`, name: name.trim(), items: [] };
       playlists.push(list);
+      mixGeneration += 1;
+      mixResumePending = null;
+      clearMixRetry();
       playlistId = list.id;
       save();
       renderPicker();
       renderQueue();
       menu.open = false;
+      if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
     deleteList.addEventListener("click", () => {
       if (playlists.length === 1 || !window.confirm(`Playlist „${activePlaylist().name}“ löschen?`)) return;
       playlists = playlists.filter(list => list.id !== playlistId);
+      mixGeneration += 1;
+      mixResumePending = null;
+      clearMixRetry();
       playlistId = playlists[0].id;
       save();
       renderPicker();
       renderQueue();
       menu.open = false;
+      if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
 
     renderPicker();
@@ -706,6 +1245,10 @@
     }
 
     disposeView = () => {
+      disposed = true;
+      mixGeneration += 1;
+      clearMixRetry();
+      clearPlaybackWatchdog();
       window.removeEventListener("message", receivePlayerMessage);
       if (typeof unsubscribe === "function") unsubscribe();
       disposeView = null;
@@ -721,6 +1264,7 @@
     },
     deactivate() {
       disposeView?.();
+      disposeYtMusicClient();
       document.getElementById(STYLE_ID)?.remove();
     }
   });

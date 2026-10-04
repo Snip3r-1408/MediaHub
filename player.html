@@ -12,23 +12,43 @@
       let player = null;
       let apiReady = false;
       let playerReady = false;
-      let queued = null;
+      let pendingLoad = null;
+      let pendingVolume = null;
+      let pendingTransport = null;
       let endedSent = false;
+      let activeVideoId = "";
+      let activeToken = 0;
+      let currentState = -1;
+      let lastProgressAt = Date.now();
+      let lastProgressTime = 0;
+      let stopRequested = false;
 
       function send(type, extra = {}) {
-        window.parent.postMessage({ source: "mediahub-player", type, ...extra }, "*");
+        window.parent.postMessage({ source: "mediahub-player", type, videoId: activeVideoId, token: activeToken, ...extra }, "*");
       }
 
       function reportYouTubeState(event) {
         const states = window.YT && YT.PlayerState;
+        const actualVideoId = player?.getVideoData?.().video_id || "";
+        if (actualVideoId && activeVideoId && actualVideoId !== activeVideoId) return;
+        currentState = event.data;
         if (event.data === states.ENDED) {
+          if (stopRequested) {
+            send("state", { state: "stopped" });
+            return;
+          }
           if (!endedSent) {
             endedSent = true;
             send("ended", { state: "stopped" });
           }
           return;
         }
-        if (event.data === states.PLAYING) endedSent = false;
+        if (event.data === states.PLAYING) {
+          stopRequested = false;
+          endedSent = false;
+          lastProgressAt = Date.now();
+          lastProgressTime = Number(player?.getCurrentTime?.() || 0);
+        }
         const state = event.data === states.PLAYING ? "playing"
           : event.data === states.PAUSED ? "paused"
           : event.data === states.BUFFERING ? "loading"
@@ -36,18 +56,47 @@
         send("state", { state });
       }
 
-      function load(videoId, autoplay) {
+      function applyPendingControls() {
+        if (!playerReady || !player) return;
+        if (pendingVolume !== null) {
+          player.setVolume(Math.max(0, Math.min(100, Number(pendingVolume || 0) * 100)));
+          pendingVolume = null;
+        }
+        if (pendingTransport === "play") {
+          stopRequested = false;
+          endedSent = false;
+          player.playVideo();
+        }
+        if (pendingTransport === "pause") player.pauseVideo();
+        if (pendingTransport === "stop") {
+          stopRequested = true;
+          endedSent = true;
+          player.stopVideo();
+        }
+        pendingTransport = null;
+      }
+
+      function load(videoId, autoplay, token = 0) {
         if (!apiReady || !videoId) return false;
         if (player && playerReady) {
+          activeVideoId = videoId;
+          activeToken = Number(token || 0);
+          stopRequested = false;
           endedSent = false;
+          currentState = -1;
+          lastProgressAt = Date.now();
+          lastProgressTime = 0;
           if (autoplay) player.loadVideoById(videoId);
           else player.cueVideoById(videoId);
           return true;
         }
         if (player) {
-          queued = { command: "load", videoId };
+          pendingLoad = { command: "load", videoId, token };
           return true;
         }
+        activeVideoId = videoId;
+        activeToken = Number(token || 0);
+        stopRequested = false;
         player = new YT.Player("player", {
           videoId,
           playerVars: {
@@ -62,11 +111,25 @@
             onReady: () => {
               playerReady = true;
               send("ready");
-              if (queued) { const next = queued; queued = null; command(next); }
+              if (pendingLoad) {
+                const next = pendingLoad;
+                pendingLoad = null;
+                command(next);
+              }
+              applyPendingControls();
             },
             onStateChange: reportYouTubeState,
-            onError: event => send("error", { code: event.data }),
-            onAutoplayBlocked: () => send("autoplay-blocked")
+            onError: event => {
+              const actualVideoId = player?.getVideoData?.().video_id || "";
+              if (actualVideoId && activeVideoId && actualVideoId !== activeVideoId) return;
+              currentState = -1;
+              send("error", { code: event.data });
+            },
+            onAutoplayBlocked: () => {
+              const actualVideoId = player?.getVideoData?.().video_id || "";
+              if (actualVideoId && activeVideoId && actualVideoId !== activeVideoId) return;
+              send("autoplay-blocked");
+            }
           }
         });
         return true;
@@ -75,25 +138,54 @@
       function command(message) {
         if (!message || !message.command) return;
         if (message.command === "load") {
-          if (!load(message.videoId, true)) queued = message;
+          pendingTransport = null;
+          if (!load(message.videoId, true, message.token)) pendingLoad = message;
           return;
         }
-        if (!player) { queued = message; return; }
-        if (message.command === "play") player.playVideo();
+        if (!playerReady || !player) {
+          if (message.command === "setVolume") pendingVolume = message.volume;
+          else if (["play", "pause", "stop"].includes(message.command)) pendingTransport = message.command;
+          return;
+        }
+        if (message.command === "play") {
+          stopRequested = false;
+          endedSent = false;
+          player.playVideo();
+        }
         if (message.command === "pause") player.pauseVideo();
-        if (message.command === "stop") player.stopVideo();
+        if (message.command === "stop") {
+          stopRequested = true;
+          endedSent = true;
+          player.stopVideo();
+        }
         if (message.command === "setVolume") player.setVolume(Math.max(0, Math.min(100, Number(message.volume || 0) * 100)));
       }
 
       window.addEventListener("message", event => command(event.data));
       window.onYouTubeIframeAPIReady = () => {
         apiReady = true;
-        if (queued) { const next = queued; queued = null; command(next); }
+        if (pendingLoad) {
+          const next = pendingLoad;
+          pendingLoad = null;
+          command(next);
+        }
       };
       window.setInterval(() => {
-        if (!playerReady || endedSent || typeof player.getDuration !== "function") return;
+        const states = window.YT && YT.PlayerState;
+        if (!playerReady || endedSent || currentState !== states?.PLAYING || typeof player.getDuration !== "function") return;
+        const actualVideoId = player?.getVideoData?.().video_id || "";
+        if (actualVideoId && activeVideoId && actualVideoId !== activeVideoId) return;
         const duration = Number(player.getDuration() || 0);
         const current = Number(player.getCurrentTime() || 0);
+        if (current > lastProgressTime + 0.05) {
+          lastProgressTime = current;
+          lastProgressAt = Date.now();
+        }
+        if (Date.now() - lastProgressAt > 30000) {
+          endedSent = true;
+          send("stalled", { state: "loading" });
+          return;
+        }
         if (duration > 1 && current >= duration - 0.5) {
           endedSent = true;
           send("ended", { state: "stopped", fallback: true });

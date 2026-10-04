@@ -14,14 +14,17 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 
 ## Funktionen
 
-- Anmeldung über Google und Suche nach Musik auf YouTube
+- Anmeldung über Google und Song-Suche über YouTube Music
 - Wiedergabe im integrierten, sichtbaren YouTube-Player
 - Steuerung über die zentrale Player-Leiste von WebRadio
 - Beliebig viele lokal gespeicherte Playlisten
 - Wiedergabe der Reihe nach, im Kreis oder zufällig
-- Auto-Mix mit echten Künstler- und Genre-Daten von MusicBrainz
+- Auto-Mix mit echten Titel-Radios von YouTube Music und Genre-Daten von MusicBrainz
 - Vier Mix-Arten: ähnliche Künstler, gleiches Genre, breiter Mix und Überraschung
-- Automatisches Nachladen neuer Titel am Ende der Warteschlange
+- Rollender Mix-Puffer mit zwölf vorbereiteten Titeln
+- Automatisches Nachladen, bevor das Ende der Warteschlange erreicht wird
+- Wechselnde Genre-, Entdeckungs-, Jahres- und Stimmungsanfragen
+- Wiedergabe-Rückfall ohne Stille, falls vorübergehend kein neuer Treffer verfügbar ist
 - Filter gegen komplette Alben, Konzerte und stundenlange Zusammenstellungen
 - Automatisches Überspringen von Videos mit Einbettungssperre
 - Dezente, platzsparende Oberfläche im WebRadio-Design
@@ -53,16 +56,22 @@ Weitere Hinweise stehen in [INSTALL.md](INSTALL.md).
 4. In der Playlist den Wiedergabemodus auswählen.
 5. Eine Mix-Art wählen und mit dem Funkeln-Symbol den Auto-Mix aktivieren.
 
-Auto-Mix erkennt den Künstler aus dem Videotitel und fragt passende Stilbegriffe
-bei MusicBrainz ab. Bei Falling In Reverse entstehen so beispielsweise Suchen
-nach Metalcore und Post-Hardcore, ohne den Künstlernamen erneut vorzugeben.
-MediaHub ergänzt höchstens zwei Titel desselben Künstlers automatisch. Ist die
-Warteschlange aufgebraucht, werden selbstständig weitere Titel gesucht.
+Auto-Mix fragt zuerst das zu einem Song gehörende YouTube-Music-Radio ab. So
+entsteht aus Falling In Reverse beispielsweise eine Mischung mit verwandten
+Metal- und Metalcore-Künstlern statt einer reinen Suche nach demselben Namen.
+Wenn das Radio nicht erreichbar ist, erkennt MediaHub den Künstler aus dem
+Videotitel und fragt passende Stilbegriffe bei MusicBrainz ab.
+MediaHub ergänzt höchstens zwei Titel desselben Künstlers innerhalb des jüngsten
+Warteschlangenabschnitts. Sobald nur noch fünf Titel vorausliegen, wird der
+Puffer im Hintergrund wieder auf bis zu zwölf Titel ergänzt. Automatisch
+hinzugefügte, bereits gehörte Titel rotieren aus der Liste; manuell gespeicherte
+Titel bleiben erhalten.
 
 ## Voraussetzungen
 
 - WebRadio **1.0.7-alpha.5** oder neuer
 - Linux oder Windows mit einer unterstützten WebRadio-Version
+- Python **3.10 oder neuer** für die erweiterte YouTube-Music-Empfehlungsengine
 - Internetverbindung
 - Google-Konto für die YouTube-Suche
 
@@ -71,10 +80,20 @@ Die Genre-Erkennung verwendet die freie Musikdatenbank
 MediaHub automatisch auf eine lokale Erkennung beziehungsweise die Suche nach
 ähnlichen Künstlern zurück.
 
+Die erweiterte Song-Suche und Radio-Funktion nutzt die im Plugin gebündelte,
+inoffizielle Open-Source-Bibliothek
+[ytmusicapi](https://github.com/sigma67/ytmusicapi). Sie wird ohne Cookies und
+ohne Zugriff auf die Google-Anmeldedaten von WebRadio betrieben. Fehlt Python
+oder ist der Dienst nicht erreichbar, arbeitet MediaHub automatisch mit der
+bisherigen WebRadio-Suche weiter.
+
 ## Bekannte Einschränkungen
 
 - Einige Videos dürfen vom Rechteinhaber nicht außerhalb von YouTube
   eingebettet werden. MediaHub erkennt diese beim Abspielen und überspringt sie.
+- Neue Suchvorgänge hängen vom verfügbaren YouTube-API-Kontingent ab. Bei einer
+  vorübergehenden Begrenzung verwendet MediaHub vorhandene Titel weiter und
+  versucht die Suche mit wachsendem Abstand erneut.
 - YouTube erlaubt keinen versteckten Audio-only-Player. Der Videoplayer muss
   deshalb sichtbar bleiben.
 - MediaHub befindet sich in der Alpha-Phase und seine Schnittstellen können sich

@@ -2,6 +2,56 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.11.0 – 2026-10-04
+
+### YouTube-Music-Empfehlungen
+
+- `ytmusicapi` 1.12.3 samt plattformneutraler Python-Abhängigkeiten gebündelt
+- Suche liefert bevorzugt echte Songs mit Album-, Künstler- und Laufzeitdaten
+- Magischer Mixer verwendet zuerst das echte Radio zum aktuellen YouTube-Music-
+  Titel und streut dadurch passende Künstler desselben Spektrums ein
+- Radio-Starttitel wechseln mit dem Wiedergabeverlauf, damit lange Sitzungen
+  nicht immer dieselbe kleine Ergebnisgruppe erhalten
+- Sichtbare Wiedergabe bleibt vollständig im offiziellen YouTube-IFrame-Player
+- Google-OAuth-Daten von WebRadio werden weder gelesen noch an Python übergeben
+
+### Ausfallsicherheit und Sicherheit
+
+- Klassischer Genre-Mixer bleibt als automatischer Rückfall erhalten
+- Lokaler Hilfsdienst lauscht nur auf `127.0.0.1`, nutzt ein zufälliges
+  Sitzungstoken und akzeptiert ausschließlich lokale App-Ursprünge
+- Private Laufzeitkonfiguration wird beim Beenden entfernt
+- Neue Integrationsprüfungen für Radio-Nachladen, Zugriffsschutz und Python-
+  Verfügbarkeit
+
+## 0.10.0 – 2026-10-03
+
+### Magischer Mixer
+
+- Echte fortlaufende Warteschlange mit zwölf vorbereiteten Titeln
+- Automatisches Nachladen, sobald nur noch fünf Titel vorausliegen
+- Rollender Verlauf statt einer unbegrenzt wachsenden Playlist
+- Wechselnde Genre-, Entdeckungs-, Jahres- und Stimmungsanfragen
+- Wiederverwendung des am längsten nicht gehörten Titels, wenn YouTube
+  vorübergehend keine neuen Treffer liefert
+- Künstlerbegrenzung gilt nur noch für die letzten Titel statt für die gesamte
+  gespeicherte Playlist
+- Bessere Erkennung verschiedener Uploads desselben Songs
+- Längere Wartezeiten nach erfolglosen Suchen schonen das YouTube-Kontingent
+
+### Zuverlässigkeit
+
+- Titelwechsel sind an Video-ID und Wiedergabe-Token gebunden
+- Verspätete Player-Ereignisse können keinen neuen Titel mehr überspringen
+- Stop, Pause, schneller Titelwechsel und Player-Start sind gegeneinander
+  abgesichert
+- Festhängende oder nicht einbettbare Videos werden automatisch übersprungen
+- Such-, Player- und Wiedergabe-Watchdogs verhindern dauerhafte Ladezustände
+- Fehlgeschlagene Nachladevorgänge aus einer alten Playlist oder Mix-Art werden
+  sicher verworfen
+- Manuell gespeicherte Playlist-Titel bleiben bei einem Wiedergabefehler erhalten
+- Automatisierte Player- und Renderer-Integrationstests ergänzt
+
 ## 0.9.0 – 2026-10-01
 
 ### Neues Erscheinungsbild

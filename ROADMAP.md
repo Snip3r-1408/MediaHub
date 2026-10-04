@@ -6,11 +6,10 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 
 ## Als Nächstes
 
-- Zuverlässigkeit des endlosen Auto-Mix weiter verbessern
 - Nicht einbettbare Videos bereits vor der Wiedergabe herausfiltern
 - Künstler- und Genre-Erkennung für mehr Sonderfälle weiter verfeinern
-- Sichtbare Lade- und Wiederherstellungszustände für den Auto-Mix
-- Doppelte Titel und alternative Uploads desselben Songs besser erkennen
+- Laufzeitdaten direkt aus der Suche auswerten, sobald WebRadio sie bereitstellt
+- Mixer-Qualität mit längeren Praxistests weiter abstimmen
 
 ## Plugin-Updates
 
@@ -41,7 +40,7 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 
 - Generische Provider-Schicht für weitere legale Musikquellen
 - Plugin-eigene OAuth-Logik über allgemeine sichere WebRadio-Schnittstellen
-- Automatisierte Tests für Playlist, Player und Auto-Mix
+- Weitere automatisierte Tests für Playlist-Verwaltung und Langzeit-Mix
 - Automatisierte, reproduzierbare Release-Pakete über GitHub Actions
 
 ## Nicht geplant

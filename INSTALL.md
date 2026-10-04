@@ -3,6 +3,7 @@
 ## Voraussetzungen
 
 - WebRadio 1.0.7-alpha.5 oder neuer
+- Python 3.10 oder neuer für YouTube-Music-Radio und verbesserte Song-Suche
 - Eine aktive Internetverbindung
 - Ein Google-Konto für Suche und Wiedergabe
 
@@ -26,6 +27,11 @@ mediahub/
 ├── player.html
 ├── plugin.json
 ├── renderer.js
+├── vendor/
+├── ytmusic-bridge.js
+├── ytmusic-client.html
+├── ytmusic-client.js
+├── ytmusic_helper.py
 └── README.md
 ```
 
@@ -40,6 +46,10 @@ Plugin-Ordner direkt anzeigen. Dort einen Unterordner `mediahub` erstellen und
 die Plugin-Dateien hineinkopieren.
 
 Danach WebRadio vollständig neu starten.
+
+Unter Windows muss Python 3.10 oder neuer installiert und über `py` oder
+`python` aufrufbar sein. Ohne Python bleibt MediaHub benutzbar, verwendet aber
+automatisch den klassischen Mixer von Version 0.10.
 
 ## Aktualisierung
 
@@ -58,10 +68,11 @@ normalen Austausch des Plugin-Ordners erhalten. Ein Backup vor größeren
 
 - Prüfen, ob `plugin.json` direkt im Ordner `mediahub` liegt.
 - Prüfen, ob WebRadio mindestens Version 1.0.7-alpha.5 verwendet.
+- Prüfen, ob `python3 --version` (Linux) beziehungsweise `py -3 --version`
+  (Windows) mindestens Python 3.10 meldet.
 - MediaHub in den Plugin-Einstellungen deaktivieren, erneut aktivieren und
   Plugins neu laden.
 - WebRadio vollständig schließen und neu öffnen.
 - Bei reproduzierbaren Problemen ein
   [GitHub Issue](https://github.com/Snip3r-1408/MediaHub/issues) mit WebRadio-
   Version, Betriebssystem und Fehlerbeschreibung erstellen.
-
