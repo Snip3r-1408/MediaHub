@@ -2,6 +2,20 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.11.1 – 2026-10-04
+
+### Behoben
+
+- „Gleiches Genre“ behält den ursprünglich manuell gewählten Titel als festen
+  Genre-Anker
+- Automatisch ergänzte Titel können den Mix nicht mehr schrittweise in ein
+  anderes Genre ziehen
+- Freie YouTube-Music-Radio-Vorschläge sind in diesem Modus auf vier Titel pro
+  Nachladevorgang begrenzt; der übrige Puffer wird über die erkannten Genres
+  ergänzt
+- Bereits gespeicherte Playlisten verwenden nach einem Neustart bevorzugt den
+  ersten manuell hinzugefügten Titel statt des letzten Auto-Mix-Titels
+
 ## 0.11.0 – 2026-10-04
 
 ### YouTube-Music-Empfehlungen

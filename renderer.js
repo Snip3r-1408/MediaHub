@@ -216,6 +216,7 @@
     let transitionGeneration = 0;
     const playHistory = [];
     let mixSource = "Magischer Mix";
+    let mixAnchor = null;
     let genreCache = {};
     try { genreCache = JSON.parse(localStorage.getItem(GENRE_CACHE_KEY) || "{}"); } catch { genreCache = {}; }
 
@@ -399,7 +400,10 @@
           if (autoMix) ensureMixBuffer().catch(() => scheduleMixRetry());
         });
         row.append(remove);
-        row.addEventListener("click", () => play(item));
+        row.addEventListener("click", () => {
+          if (!item.mediaHubAutoAdded) mixAnchor = item;
+          play(item);
+        });
         queue.append(row);
       });
       renderPicker();
@@ -750,24 +754,27 @@
       mixRefillPromise = (async () => {
         const additions = [];
         const refillStarted = Date.now();
-        const seed = seedItem || selected || targetPlaylist.items.at(-1) || currentResults[0];
+        const manualSeed = targetPlaylist.items.find(item => !item.mediaHubAutoAdded);
+        const seed = seedItem || mixAnchor || currentResults[0] || manualSeed || selected || targetPlaylist.items.at(-1);
+        if (!mixAnchor && seed?.id) mixAnchor = seed;
         const recentIds = new Set(playHistory.slice(-MIX_HISTORY_KEEP));
-        const radioSeeds = [
-          seed,
-          ...targetPlaylist.items.filter(item => recentIds.has(item.id)).reverse()
-        ].filter((item, index, all) => item?.id && all.findIndex(candidate => candidate?.id === item.id) === index);
+        const radioSeeds = (mixStyle === "genre"
+          ? [mixAnchor || seed]
+          : [seed, ...targetPlaylist.items.filter(item => recentIds.has(item.id)).reverse()])
+          .filter((item, index, all) => item?.id && all.findIndex(candidate => candidate?.id === item.id) === index);
         const radioSeed = radioSeeds.length ? radioSeeds[mixRound % radioSeeds.length] : null;
+        const radioWanted = mixStyle === "genre" ? Math.min(wanted, 4) : wanted;
         mixRound = (mixRound + 1) % 100000;
         try {
           const radioTracks = await ytMusicRadio(radioSeed?.id, Math.max(25, wanted * 2));
           if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
           if (radioTracks?.length) {
-            additions.push(...mergeIntoPlaylist(radioTracks, wanted, 2, targetPlaylist));
-            if (additions.length) mixSource = "YouTube Music Radio";
+            additions.push(...mergeIntoPlaylist(radioTracks, radioWanted, 2, targetPlaylist));
+            if (additions.length) mixSource = mixStyle === "genre" ? "Fester Genre-Mix" : "YouTube Music Radio";
           }
         } catch { /* use the classic genre search below */ }
         if (additions.length >= wanted) return additions;
-        const queries = await mixQueries(seed, lastSearchQuery || input.value.trim(), mixRound);
+        const queries = await mixQueries(mixStyle === "genre" ? (mixAnchor || seed) : seed, lastSearchQuery || input.value.trim(), mixRound);
         for (let attempt = 0; attempt < Math.min(queries.length, MIX_MAX_QUERIES_PER_REFILL) && additions.length < wanted; attempt += 1) {
           if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) break;
           if (attempt >= 2 && Date.now() - refillStarted > 25000) break;
@@ -777,7 +784,9 @@
             const suggestions = await searchWithTimeout(query);
             if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) break;
             additions.push(...mergeIntoPlaylist(suggestions || [], wanted - additions.length, 2, targetPlaylist));
-            if (additions.length && mixSource !== "YouTube Music Radio") mixSource = "Magischer Mix";
+            if (additions.length && !["YouTube Music Radio", "Fester Genre-Mix"].includes(mixSource)) {
+              mixSource = "Magischer Mix";
+            }
           } catch { /* rotate to the next independent query */ }
         }
         if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
@@ -817,7 +826,10 @@
           addToPlaylist(item);
         });
         row.append(image, copy, plus);
-        row.addEventListener("click", () => play(item));
+        row.addEventListener("click", () => {
+          mixAnchor = item;
+          play(item);
+        });
         results.append(row);
       });
     }
@@ -1144,6 +1156,7 @@
       showError("");
       try {
         const found = await searchSongs(query);
+        mixAnchor = found[0] || null;
         renderResults(found);
         if (autoMix) {
           const additions = await fillGenreMix(query, found);
@@ -1165,6 +1178,7 @@
       mixResumePending = null;
       clearMixRetry();
       playlistId = picker.value;
+      mixAnchor = activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
       renderQueue();
       menu.open = false;
     });
@@ -1175,6 +1189,7 @@
       mixRound = 0;
       mixRetryAttempt = 0;
       clearMixRetry();
+      if (!mixAnchor) mixAnchor = selected || currentResults[0] || activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
       if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
     modeButton.addEventListener("click", () => {
@@ -1195,6 +1210,7 @@
       } else {
         mixGeneration += 1;
         mixRetryAttempt = 0;
+        mixAnchor = selected || currentResults[0] || activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
         fillGenreMix(lastSearchQuery || input.value.trim(), currentResults).then(additions => {
           if (!selected && (additions[0] || currentResults[0])) play(additions[0] || currentResults[0]);
           ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
