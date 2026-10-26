@@ -2,7 +2,17 @@
   "use strict";
 
   const CONFIG_PATH = ".runtime/ytmusic-bridge.json";
-  const ALLOWED_ROUTES = new Set(["/v1/search", "/v1/radio"]);
+  const ALLOWED_ROUTES = new Set([
+    "/v1/search",
+    "/v1/radio",
+    "/v1/home",
+    "/v1/explore",
+    "/v1/charts",
+    "/v1/album",
+    "/v1/artist",
+    "/v1/playlist",
+    "/v1/mood-playlists"
+  ]);
   let configPromise = null;
 
   function validConfig(config) {
@@ -60,7 +70,7 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || `YouTube Music antwortet mit ${response.status}`);
       responseMessage.ok = true;
-      responseMessage.result = Array.isArray(data?.result) ? data.result : [];
+      responseMessage.result = data?.result ?? null;
     } catch (error) {
       responseMessage.error = error.message || "YouTube Music Anfrage fehlgeschlagen";
     }

@@ -24,15 +24,19 @@
   let ytMusicBridgeFailedAt = 0;
 
   const css = `
-    .mediahub{min-height:100%;padding:22px 28px;color:var(--text-main,#f5f5f5);font-family:inherit;box-sizing:border-box}.mediahub *{box-sizing:border-box}
-    .mh-hidden{display:none!important}.mh-btn{border:0;border-radius:10px;padding:10px 15px;background:var(--accent-color,#7166ff);color:#fff;font:inherit;font-weight:700;cursor:pointer;transition:.16s ease}.mh-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}.mh-btn:disabled{opacity:.55;cursor:wait;transform:none}.mh-btn.ghost{background:#ffffff0b;color:var(--text-muted,#aaa)}.mh-icon-btn{width:40px;height:40px;display:grid;place-items:center;padding:0;border-radius:12px}.mh-icon-btn svg,.mh-mini svg,.mh-plus svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}.mh-icon-btn.ghost:hover{background:#ffffff16;color:#fff}
-    .mh-welcome{min-height:470px;display:grid;place-items:center;text-align:center}.mh-welcome-inner{max-width:480px;padding:32px}.mh-mark{width:54px;height:54px;margin:0 auto 22px;display:grid;place-items:center;border-radius:18px;background:linear-gradient(145deg,var(--accent-color,#7166ff),#a352ff);font-size:24px;box-shadow:0 16px 42px #6c5cff35}.mh-eyebrow{margin:0 0 9px;color:var(--accent-color,#8277ff);font-size:10px;font-weight:800;letter-spacing:.16em}.mh-welcome h1{margin:0 0 12px;font-size:34px}.mh-welcome p{margin:0 auto 25px;color:var(--text-muted,#a6a6a6);font-size:15px;line-height:1.65}
-    .mh-top{display:flex;align-items:center;gap:14px;margin-bottom:18px}.mh-brand{min-width:165px;display:flex;align-items:center;gap:10px}.mh-brand-mark{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(145deg,var(--accent-color,#7166ff),#a552ff);font-size:14px;font-weight:900;box-shadow:0 8px 24px #6d5fff35}.mh-brand h1{margin:0;font-size:21px;letter-spacing:-.03em}.mh-search{display:flex;flex:0 1 460px;gap:4px;margin-left:auto;padding:4px;border-radius:13px;background:#ffffff0b}.mh-input,.mh-select{min-width:0;border:0;border-radius:10px;background:#ffffff0b;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:7px 10px;background:transparent}.mh-input:focus,.mh-select:focus{box-shadow:0 0 0 2px var(--accent-color,#7166ff)}.mh-select{padding:8px 10px}.mh-error{margin:-7px 0 12px;padding:9px 12px;border-radius:9px;background:#ff5f5f12;color:#ff9d9d;font-size:13px}
-    .mh-content{display:grid;grid-template-columns:minmax(340px,1.08fr) minmax(320px,.92fr);gap:16px;align-items:start}.mh-library,.mh-player{min-width:0;padding:14px;border-radius:18px;background:linear-gradient(145deg,#ffffff08,#ffffff0350)}.mh-tabs{display:flex;align-items:center;gap:16px;margin-bottom:12px}.mh-tab{position:relative;border:0;background:transparent;color:var(--text-muted,#999);font:inherit;font-weight:700;padding:4px 0 9px;cursor:pointer}.mh-tab.active{color:inherit}.mh-tab.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--accent-color,#7166ff)}.mh-count{margin-left:auto;color:var(--text-muted,#888);font-size:11px}.mh-list,.mh-queue{max-height:360px;margin:0;padding:0;list-style:none;overflow:auto}.mh-empty{margin:0;padding:28px 8px;color:var(--text-muted,#999);font-size:13px;line-height:1.5}
-    .mh-result{display:grid;grid-template-columns:66px minmax(0,1fr) 30px;gap:10px;align-items:center;padding:7px 8px;border-radius:10px;cursor:pointer}.mh-result:hover,.mh-result.active,.mh-queue-row:hover,.mh-queue-row.active{background:#ffffff0b}.mh-result img{width:66px;height:42px;border-radius:7px;object-fit:cover}.mh-copy{display:grid;min-width:0;gap:2px}.mh-copy>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-copy strong{font-size:13px}.mh-copy span{color:var(--text-muted,#999);font-size:12px}.mh-plus,.mh-remove{border:0;background:#ffffff0c;color:var(--text-muted,#aaa);cursor:pointer}.mh-plus{width:28px;height:28px;border-radius:8px;font-size:17px}.mh-plus:hover{background:var(--accent-color,#7166ff);color:#fff}
-    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:7px;margin-bottom:10px}.mh-mini{padding:7px 10px;border-radius:8px}.mh-mini.active{background:var(--accent-color,#7166ff);color:#fff}.mh-mix-style{width:100%;font-size:12px}.mh-menu{position:relative}.mh-menu>summary{list-style:none}.mh-menu>summary::-webkit-details-marker{display:none}.mh-menu-panel{position:absolute;z-index:20;right:0;top:46px;width:205px;padding:8px;display:grid;gap:6px;border:1px solid #ffffff12;border-radius:12px;background:#17171d;box-shadow:0 16px 40px #0008}.mh-menu-panel .mh-select{width:100%}.mh-menu-panel .mh-btn{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;font-size:12px}.mh-menu-panel .mh-btn svg{width:16px;height:16px}.mh-queue-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px;border-radius:10px;cursor:pointer}.mh-queue-row:hover{background:#ffffff09}.mh-queue-row.active{background:linear-gradient(90deg,#7568ff24,transparent)}.mh-queue-cover{width:46px;height:46px;border-radius:8px;object-fit:cover;background:#ffffff09}.mh-queue-copy{display:grid;min-width:0;gap:3px}.mh-queue-copy strong,.mh-queue-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-queue-copy strong{font-size:13px}.mh-queue-copy span{color:var(--text-muted,#999);font-size:11px}.mh-remove{font-size:17px;border-radius:6px}
-    .mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:0 2px 12px}.mh-player-label h2{margin:0;font-size:14px}.mh-player-label span{color:var(--text-muted,#888);font-size:11px}.mh-player-placeholder{min-height:260px;display:grid;place-items:center;border-radius:14px;background:radial-gradient(circle at 50% 35%,#7568ff20,transparent 48%),#08090c;color:var(--text-muted,#999);font-size:13px;text-align:center;padding:25px}.mh-player-empty{display:grid;justify-items:center;gap:12px}.mh-player-empty-mark{width:54px;height:54px;display:grid;place-items:center;border-radius:50%;background:#ffffff0a;color:#ffffff55;font-size:22px}.mh-frame{height:260px;min-height:210px;border-radius:14px;overflow:hidden;background:#000;box-shadow:0 16px 40px #0004}.mh-frame iframe{width:100%;height:100%;border:0;display:block}
-    @media(max-width:820px){.mediahub{padding:18px}.mh-top{flex-wrap:wrap}.mh-search{order:3;flex:1 0 100%;margin-left:0}.mh-content{grid-template-columns:1fr}.mh-list,.mh-queue{max-height:300px}.mh-frame{height:230px}}
+    .mediahub{height:100%;min-height:560px;overflow:hidden;color:var(--text-main,#f5f5f5);font-family:inherit;box-sizing:border-box;background:linear-gradient(145deg,#0c0d12 0%,#090a0e 55%,#11101a 100%);container-type:inline-size}.mediahub *{box-sizing:border-box}.mediahub button,.mediahub input,.mediahub select{font-family:inherit}
+    .mh-hidden{display:none!important}.mh-app{height:100%;min-height:560px;overflow:hidden}.mh-btn{border:0;border-radius:999px;padding:10px 16px;background:linear-gradient(135deg,var(--accent-color,#7166ff),#9b5cff);color:#fff;font:inherit;font-weight:750;cursor:pointer;transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease}.mh-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px #6d5fff2e}.mh-btn:disabled{opacity:.5;cursor:wait;transform:none;box-shadow:none}.mh-btn.ghost{background:#ffffff0a;color:var(--text-muted,#b6b6c2)}.mh-btn.ghost:hover{background:#ffffff15;color:#fff}.mh-icon-btn{width:38px;height:38px;display:grid;place-items:center;padding:0;border-radius:50%}.mh-icon-btn svg,.mh-mini svg,.mh-plus svg,.mh-nav-item svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+    .mh-welcome{min-height:560px;display:grid;place-items:center;padding:30px;text-align:center;background:radial-gradient(circle at 50% 36%,#7765ff20,transparent 28%)}.mh-welcome-inner{max-width:480px;padding:34px}.mh-mark{width:62px;height:62px;margin:0 auto 22px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--accent-color,#7166ff),#b45cff);font-size:24px;box-shadow:0 18px 55px #6c5cff42}.mh-eyebrow{margin:0 0 9px;color:#9188ff;font-size:10px;font-weight:850;letter-spacing:.2em}.mh-welcome h1{margin:0 0 12px;font-size:34px;letter-spacing:-.04em}.mh-welcome p{margin:0 auto 25px;color:var(--text-muted,#aaaab8);font-size:15px;line-height:1.65}
+    .mh-top{height:64px;display:grid;grid-template-columns:190px minmax(240px,560px) 1fr 42px;align-items:center;gap:16px;padding:10px 18px;border-bottom:1px solid #ffffff0b;background:#090a0ee8;backdrop-filter:blur(18px)}.mh-brand{display:flex;align-items:center;gap:10px}.mh-brand-mark{width:35px;height:35px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--accent-color,#7166ff),#b252ff);font-size:13px;font-weight:900;box-shadow:0 8px 28px #6d5fff3b}.mh-brand h1{margin:0;font-size:19px;letter-spacing:-.045em}.mh-search{display:flex;gap:4px;padding:4px 4px 4px 12px;border:1px solid #ffffff10;border-radius:999px;background:#ffffff0b;transition:border-color .16s ease,background .16s ease}.mh-search:focus-within{border-color:#8a7cff80;background:#ffffff10}.mh-input,.mh-select{min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:6px 2px}.mh-search .mh-input::placeholder{color:#777785}.mh-select{padding:8px 9px;border-radius:9px;background:#ffffff0a}.mh-select option{background:#18181f;color:#fff}.mh-top-spacer{min-width:0}.mh-error{margin:0 0 12px;padding:9px 12px;border:1px solid #ff727225;border-radius:11px;background:#ff5f5f10;color:#ffaaaa;font-size:12px}
+    .mh-content{height:calc(100% - 64px);display:grid;grid-template-columns:190px minmax(330px,1fr) minmax(250px,330px);min-height:0}.mh-sidebar{min-width:0;overflow:hidden;padding:18px 12px;border-right:1px solid #ffffff0b;background:#090a0dac}.mh-nav{display:grid;gap:4px}.mh-nav-item{width:100%;display:flex;align-items:center;gap:12px;border:0;border-radius:11px;padding:10px 12px;background:transparent;color:#aaaab7;font:inherit;font-size:13px;font-weight:650;text-align:left;cursor:pointer;transition:.16s ease}.mh-nav-item:hover{background:#ffffff09;color:#fff}.mh-nav-item.active{background:linear-gradient(90deg,#7668ff28,#9a5dff0b);color:#fff}.mh-nav-item.active svg{color:#9185ff}.mh-side-rule{height:1px;margin:17px 8px;background:#ffffff0b}.mh-side-label{margin:0 10px 8px;color:#666777;font-size:9px;font-weight:850;letter-spacing:.16em}.mh-sidebar-playlists{display:grid;gap:2px;max-height:calc(100% - 180px);overflow:auto}.mh-sidebar-list{width:100%;overflow:hidden;border:0;border-radius:9px;padding:8px 10px;background:transparent;color:#8f909d;font:inherit;font-size:11px;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}.mh-sidebar-list:hover{background:#ffffff08;color:#fff}.mh-sidebar-list.active{color:#fff}.mh-workspace{min-width:0;min-height:0;overflow:auto;padding:18px 20px 22px}.mh-queue-panel{min-width:0;min-height:0;overflow:hidden;padding:18px 12px 16px;border-left:1px solid #ffffff0b;background:#090a0da8}.mh-queue-heading{display:flex;justify-content:space-between;align-items:end;margin:0 4px 13px}.mh-queue-heading h2{margin:0;font-size:15px;letter-spacing:-.02em}.mh-queue-heading span{color:#6f7080;font-size:10px}
+    .mh-player,.mh-library{min-width:0}.mh-player{margin-bottom:18px}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:0 2px 10px}.mh-player-label h2{margin:0;font-size:15px;letter-spacing:-.02em}.mh-player-label span{max-width:60%;overflow:hidden;color:var(--text-muted,#858694);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.mh-player-placeholder{min-height:245px;display:grid;place-items:center;overflow:hidden;border:1px solid #ffffff08;border-radius:16px;background:radial-gradient(circle at 50% 35%,#7568ff24,transparent 42%),linear-gradient(145deg,#11121a,#08090c);color:var(--text-muted,#858694);font-size:12px;text-align:center;padding:25px;box-shadow:0 18px 44px #0004}.mh-player-idle .mh-player-placeholder{min-height:132px}.mh-player-idle .mh-player-empty{grid-template-columns:auto 1fr;align-items:center;justify-items:start;text-align:left}.mh-player-idle .mh-player-empty-mark{width:48px;height:48px}.mh-player-empty{display:grid;justify-items:center;gap:12px}.mh-player-empty-mark{width:58px;height:58px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,#ffffff12,#ffffff05);color:#ffffff64;font-size:23px}.mh-frame{height:290px;min-height:220px;overflow:hidden;border-radius:16px;background:#000;box-shadow:0 18px 44px #0006}.mh-frame iframe{width:100%;height:100%;border:0;display:block}
+    .mh-library{padding-top:2px}.mh-tabs{display:flex;align-items:center;gap:20px;margin-bottom:10px;border-bottom:1px solid #ffffff0b}.mh-tab{position:relative;border:0;background:transparent;color:var(--text-muted,#777886);font:inherit;font-size:13px;font-weight:750;padding:7px 0 11px;cursor:pointer}.mh-tab.active{color:#fff}.mh-tab.active:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent-color,#7166ff),#ac5cff)}.mh-count{margin-left:auto;padding-bottom:7px;color:#6f7080;font-size:10px}.mh-list,.mh-queue,.mh-catalog{margin:0;padding:0;list-style:none;overflow:auto}.mh-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;max-height:245px;padding-right:4px}.mh-queue{height:calc(100% - 82px);padding-right:3px}.mh-empty{margin:0;padding:28px 8px;color:var(--text-muted,#858694);font-size:12px;line-height:1.55}.mh-library-overview{min-height:180px;display:grid;place-items:center;padding:20px;border-radius:15px;background:linear-gradient(135deg,#7568ff15,#ffffff03)}.mh-library-card{text-align:center}.mh-library-card .mh-mark{width:48px;height:48px;margin-bottom:14px;font-size:18px}.mh-library-card h3{margin:0 0 5px;font-size:19px}.mh-library-card p{margin:0;color:#898a98;font-size:12px}.mh-catalog{display:grid;gap:22px;max-height:360px;padding:2px 4px 12px 0}.mh-catalog-intro{display:flex;justify-content:space-between;align-items:end;gap:16px}.mh-catalog-intro h2{margin:0;font-size:24px;letter-spacing:-.045em}.mh-catalog-intro p{margin:5px 0 0;color:#868795;font-size:11px}.mh-catalog-section{display:grid;gap:10px}.mh-catalog-heading{display:flex;align-items:center;justify-content:space-between}.mh-catalog-heading h3{margin:0;font-size:14px;letter-spacing:-.02em}.mh-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}.mh-catalog-card{position:relative;min-width:0;border:0;border-radius:13px;padding:8px;background:#ffffff06;color:inherit;text-align:left;transition:.16s ease}.mh-catalog-card:hover,.mh-catalog-card:focus-within{background:#ffffff0d;transform:translateY(-2px)}.mh-catalog-open{width:100%;display:block;border:0;padding:0;background:transparent;color:inherit;text-align:left;cursor:pointer}.mh-catalog-cover{aspect-ratio:1;width:100%;display:grid;place-items:center;overflow:hidden;border-radius:9px;background:linear-gradient(145deg,#7568ff38,#242433);color:#ffffff8a;font-size:24px}.mh-catalog-cover img{width:100%;height:100%;object-fit:cover}.mh-catalog-copy{display:grid;gap:3px;padding:8px 2px 2px}.mh-catalog-copy strong,.mh-catalog-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-catalog-copy strong{font-size:11px}.mh-catalog-copy span{color:#7e7f8d;font-size:9px}.mh-catalog-add{position:absolute;right:13px;top:13px;width:28px;height:28px;display:grid;place-items:center;border:0;border-radius:50%;background:#0b0c10d9;color:#fff;cursor:pointer;opacity:0;transition:.16s ease}.mh-catalog-card:hover .mh-catalog-add,.mh-catalog-card:focus-within .mh-catalog-add,.mh-catalog-add:focus-visible{opacity:1}.mh-catalog-add svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}.mh-catalog-loading{min-height:160px;display:grid;place-items:center;color:#858694;font-size:12px}.mh-catalog-hero{display:grid;grid-template-columns:92px minmax(0,1fr);gap:16px;align-items:end;padding:13px;border-radius:16px;background:linear-gradient(135deg,#7568ff24,#ffffff05)}.mh-catalog-hero img{width:92px;height:92px;border-radius:11px;object-fit:cover;background:#ffffff09}.mh-catalog-hero h2{margin:0 0 4px;font-size:23px;letter-spacing:-.04em}.mh-catalog-hero p{margin:0;color:#9293a1;font-size:11px;line-height:1.5}
+    .mh-result{display:grid;grid-template-columns:54px minmax(0,1fr) 28px;gap:9px;align-items:center;min-width:0;padding:6px;border-radius:10px;cursor:pointer;transition:.14s ease}.mh-result:hover{background:#ffffff09}.mh-result.active{background:linear-gradient(90deg,#7769ff20,#ffffff04)}.mh-result img{width:54px;height:42px;border-radius:7px;object-fit:cover;background:#ffffff08}.mh-copy{display:grid;min-width:0;gap:2px}.mh-copy>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-copy strong{font-size:12px}.mh-copy span{color:var(--text-muted,#858694);font-size:10px}.mh-plus,.mh-remove{border:0;background:transparent;color:var(--text-muted,#80818e);cursor:pointer}.mh-plus{width:27px;height:27px;display:grid;place-items:center;border-radius:50%}.mh-plus:hover{background:#ffffff14;color:#fff}
+    .mh-playlist-bar{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:5px;margin-bottom:10px}.mh-mini{padding:7px 9px;border-radius:9px}.mh-mini.active{background:linear-gradient(135deg,var(--accent-color,#7166ff),#985eff);color:#fff}.mh-mix-style{width:100%;font-size:10px}.mh-menu{position:relative}.mh-menu>summary{list-style:none}.mh-menu>summary::-webkit-details-marker{display:none}.mh-menu-panel{position:absolute;z-index:20;right:0;top:43px;width:205px;padding:8px;display:grid;gap:6px;border:1px solid #ffffff12;border-radius:12px;background:#17171e;box-shadow:0 18px 42px #000b}.mh-menu-panel .mh-select{width:100%}.mh-menu-panel .mh-btn{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;font-size:11px}.mh-menu-panel .mh-btn svg{width:16px;height:16px}.mh-queue-row{display:grid;grid-template-columns:42px minmax(0,1fr) 25px;gap:8px;align-items:center;padding:5px;border-radius:9px;cursor:pointer;transition:.14s ease}.mh-queue-row:hover{background:#ffffff08}.mh-queue-row.active{background:linear-gradient(90deg,#7568ff2a,transparent)}.mh-queue-cover{width:42px;height:42px;border-radius:7px;object-fit:cover;background:#ffffff08}.mh-queue-copy{display:grid;min-width:0;gap:2px}.mh-queue-copy strong,.mh-queue-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-queue-copy strong{font-size:11px}.mh-queue-copy span{color:var(--text-muted,#81828f);font-size:9px}.mh-remove{width:25px;height:25px;border-radius:50%;font-size:15px}.mh-remove:hover{background:#ffffff10;color:#fff}
+    @container(max-width:1050px){.mh-top{grid-template-columns:58px minmax(220px,1fr) 42px}.mh-top-spacer{display:none}.mh-brand h1,.mh-nav-item span,.mh-side-label,.mh-sidebar-playlists{display:none}.mh-brand{justify-content:center}.mh-content{grid-template-columns:58px minmax(330px,1fr) 250px}.mh-sidebar{padding-inline:7px}.mh-nav-item{justify-content:center;padding:10px}.mh-list{grid-template-columns:1fr}}
+    @container(max-width:700px){.mediahub,.mh-app{min-height:680px;height:auto;overflow:visible}.mh-top{grid-template-columns:1fr 42px;height:auto}.mh-brand{display:none}.mh-search{grid-column:1}.mh-content{height:auto;grid-template-columns:1fr}.mh-sidebar{display:none}.mh-workspace{overflow:visible;padding:16px}.mh-queue-panel{min-height:300px;border-top:1px solid #ffffff0b;border-left:0}.mh-frame{height:250px}.mh-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:280px}.mh-queue{height:auto;max-height:280px}.mh-catalog{max-height:none}}
+    @container(max-width:570px){.mh-list{grid-template-columns:1fr}.mh-workspace{padding:13px}.mh-frame{height:225px}.mh-search .mh-input{font-size:12px}}
+    @media(hover:none){.mh-catalog-add{opacity:1}}
   `;
 
   const el = (tag, cls, text) => {
@@ -51,6 +55,9 @@
       order: ["M5 7h14", "M5 12h14", "M5 17h10", "m17 15 2 2-2 2"],
       repeat: ["m17 2 4 4-4 4", "M3 11V9a3 3 0 0 1 3-3h15", "m7 22-4-4 4-4", "M21 13v2a3 3 0 0 1-3 3H3"],
       shuffle: ["M16 3h5v5", "M4 20 21 3", "M21 16v5h-5", "m15 15 6 6", "M4 4l5 5"],
+      home: ["m3 11 9-8 9 8", "M5 10v10h14V10", "M9 20v-6h6v6"],
+      compass: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20", "m16 8-2.3 5.7L8 16l2.3-5.7L16 8Z"],
+      library: ["M5 4v16", "M9 4v16", "M13 6v14", "m17 5 3 14"],
       sparkles: ["m12 3 1.2 3.3L16.5 7.5l-3.3 1.2L12 12l-1.2-3.3-3.3-1.2 3.3-1.2L12 3", "m19 13 .8 2.2L22 16l-2.2.8L19 19l-.8-2.2L16 16l2.2-.8L19 13", "m6 14 1 2.8 2.8 1L7 18.8 6 22l-1-3.2-3-1 3-1L6 14"]
     };
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -72,8 +79,8 @@
 
   async function loadYtMusicClient() {
     if (!window.pluginHttpAPI?.getAssetUrl) return null;
-    if (ytMusicBridgeFailedAt && Date.now() - ytMusicBridgeFailedAt < YTMUSIC_RETRY_AFTER) return null;
     if (ytMusicClientFrame?.contentWindow) return ytMusicClientFrame;
+    if (ytMusicBridgeFailedAt && Date.now() - ytMusicBridgeFailedAt < YTMUSIC_RETRY_AFTER) return null;
     if (ytMusicClientPromise) return ytMusicClientPromise;
     ytMusicClientPromise = (async () => {
       try {
@@ -136,8 +143,8 @@
     if (!pending) return;
     ytMusicPending.delete(String(event.data.requestId));
     window.clearTimeout(pending.timer);
-    if (!event.data.ok) ytMusicBridgeFailedAt = Date.now();
-    pending.resolve(event.data.ok && Array.isArray(event.data.result) ? event.data.result : null);
+    if (event.data.ok) ytMusicBridgeFailedAt = 0;
+    pending.resolve(event.data.ok ? (event.data.result ?? null) : null);
   });
 
   function ytMusicSearch(query, limit = 20) {
@@ -146,6 +153,30 @@
 
   function ytMusicRadio(videoId, limit = 30) {
     return videoId ? ytMusicRequest("/v1/radio", { videoId, limit }) : Promise.resolve(null);
+  }
+
+  function ytMusicHome(limit = 6) {
+    return ytMusicRequest("/v1/home", { limit });
+  }
+
+  function ytMusicExplore() {
+    return ytMusicRequest("/v1/explore", {});
+  }
+
+  function ytMusicAlbum(browseId) {
+    return ytMusicRequest("/v1/album", { browseId });
+  }
+
+  function ytMusicArtist(browseId) {
+    return ytMusicRequest("/v1/artist", { browseId });
+  }
+
+  function ytMusicPlaylist(playlistId, limit = 100) {
+    return ytMusicRequest("/v1/playlist", { playlistId, limit });
+  }
+
+  function ytMusicMoodPlaylists(params) {
+    return ytMusicRequest("/v1/mood-playlists", { params });
   }
 
   function disposeYtMusicClient() {
@@ -190,6 +221,9 @@
     let frameLoadPromise = null;
     let playerReady = false;
     let currentTab = "results";
+    let currentSection = "home";
+    let catalogueRequestToken = 0;
+    const catalogueCache = new Map();
     let playMode = localStorage.getItem(MODE_KEY) || "once";
     let autoMix = localStorage.getItem(AUTO_MIX_KEY) === "true";
     let mixStyle = localStorage.getItem(MIX_STYLE_KEY) || "genre";
@@ -222,13 +256,13 @@
 
     const welcome = el("div", "mh-welcome");
     const welcomeInner = el("div", "mh-welcome-inner");
-    welcomeInner.append(el("div", "mh-mark", "▶"), el("p", "mh-eyebrow", "YOUTUBE MUSIC"), el("h1", "", "Willkommen bei MediaHub"), el("p", "", "Bitte melden Sie sich mit Google an, um diesen Service zu nutzen."));
+    welcomeInner.append(el("div", "mh-mark", "▶"), el("p", "mh-eyebrow", "MEDIAHUB STREAMING"), el("h1", "", "Willkommen bei MediaHub"), el("p", "", "Bitte melden Sie sich mit Google an, um diesen Service zu nutzen."));
     const login = el("button", "mh-btn", "Mit Google anmelden");
     login.type = "button";
     welcomeInner.append(login);
     welcome.append(welcomeInner);
 
-    const app = el("div", "mh-hidden");
+    const app = el("div", "mh-app mh-hidden");
     const brand = el("div", "mh-brand");
     brand.append(el("div", "mh-brand-mark", "M"), el("h1", "", "MediaHub"));
     const form = el("form", "mh-search");
@@ -247,12 +281,12 @@
     logout.setAttribute("aria-label", "Abmelden");
     logout.append(icon("logout"));
     const top = el("header", "mh-top");
-    top.append(brand, form, logout);
+    top.append(brand, form, el("div", "mh-top-spacer"), logout);
     const error = el("p", "mh-error");
     error.hidden = true;
 
-    const resultTab = el("button", "mh-tab active", "Treffer");
-    const playlistTab = el("button", "mh-tab", "Playlist");
+    const resultTab = el("button", "mh-tab active", "Entdecken");
+    const playlistTab = el("button", "mh-tab", "Mediathek");
     resultTab.type = playlistTab.type = "button";
     const count = el("span", "mh-count");
     const tabs = el("div", "mh-tabs");
@@ -261,8 +295,15 @@
     const results = el("ol", "mh-list");
     const resultsEmpty = el("p", "mh-empty", "Suche nach einem Titel, Künstler oder Album.");
     resultsView.append(resultsEmpty, results);
+    const catalogueView = el("div", "mh-catalog");
+    const catalogueLoading = el("div", "mh-catalog-loading", "YouTube Music wird geladen …");
+    catalogueView.append(catalogueLoading);
 
-    const playlistView = el("div", "mh-hidden");
+    const playlistView = el("aside", "mh-queue-panel");
+    const queueHeading = el("div", "mh-queue-heading");
+    const queueTitle = el("h2", "", "Als Nächstes");
+    const queueMeta = el("span", "", "Deine Playlist");
+    queueHeading.append(queueTitle, queueMeta);
     const picker = el("select", "mh-select");
     const mixStylePicker = el("select", "mh-select mh-mix-style");
     [
@@ -300,23 +341,44 @@
     const playlistBar = el("div", "mh-playlist-bar");
     playlistBar.append(mixStylePicker, mixButton, modeButton, menu);
     const queue = el("ol", "mh-queue");
-    const queueEmpty = el("p", "mh-empty", "Füge Treffer über das Plus zu deiner Playlist hinzu.");
-    playlistView.append(playlistBar, queueEmpty, queue);
+    const queueEmpty = el("p", "mh-empty", "Füge Treffer über das Plus zu deiner Warteschlange hinzu.");
+    playlistView.append(queueHeading, playlistBar, queueEmpty, queue);
+    const playlistOverview = el("div", "mh-library-overview mh-hidden");
+    const playlistCard = el("div", "mh-library-card");
+    const playlistOverviewName = el("h3", "", "Meine Playlist");
+    const playlistOverviewMeta = el("p", "", "Noch keine Titel gespeichert");
+    playlistCard.append(el("div", "mh-mark", "♪"), playlistOverviewName, playlistOverviewMeta);
+    playlistOverview.append(playlistCard);
     const library = el("section", "mh-library");
-    library.append(tabs, resultsView, playlistView);
+    library.append(tabs, catalogueView, resultsView, playlistOverview);
 
     const playerLabel = el("div", "mh-player-label");
     const playerStatus = el("span", "", "MediaHub Player");
-    playerLabel.append(el("h2", "", "Aktueller Titel"), playerStatus);
+    const playerTitle = el("h2", "", "Jetzt läuft");
+    playerLabel.append(playerTitle, playerStatus);
     const playerHost = el("div", "mh-player-placeholder");
     const playerEmpty = el("div", "mh-player-empty");
     playerEmpty.append(el("div", "mh-player-empty-mark", "♪"), el("span", "", "Wähle einen Titel aus"));
     playerHost.append(playerEmpty);
-    const player = el("section", "mh-player");
+    const player = el("section", "mh-player mh-player-idle");
     player.append(playerLabel, playerHost);
+    const homeNav = el("button", "mh-nav-item active");
+    const discoverNav = el("button", "mh-nav-item");
+    const libraryNav = el("button", "mh-nav-item");
+    homeNav.type = discoverNav.type = libraryNav.type = "button";
+    homeNav.append(icon("home"), el("span", "", "Startseite"));
+    discoverNav.append(icon("compass"), el("span", "", "Entdecken"));
+    libraryNav.append(icon("library"), el("span", "", "Mediathek"));
+    const nav = el("nav", "mh-nav");
+    nav.append(homeNav, discoverNav, libraryNav);
+    const sidebarPlaylists = el("div", "mh-sidebar-playlists");
+    const sidebar = el("aside", "mh-sidebar");
+    sidebar.append(nav, el("div", "mh-side-rule"), el("p", "mh-side-label", "DEINE PLAYLISTS"), sidebarPlaylists);
+    const workspace = el("main", "mh-workspace");
+    workspace.append(error, player, library);
     const content = el("div", "mh-content");
-    content.append(library, player);
-    app.append(top, error, content);
+    content.append(sidebar, workspace, playlistView);
+    app.append(top, content);
     root.append(welcome, app);
 
     const showError = message => {
@@ -330,16 +392,170 @@
     function showLoggedIn(loggedIn) {
       welcome.classList.toggle("mh-hidden", loggedIn);
       app.classList.toggle("mh-hidden", !loggedIn);
+      if (loggedIn) {
+        setTab("results", "home");
+        loadCatalogue("home").catch(() => renderCatalogue([], "Für dich", "Der Katalog ist gerade nicht erreichbar – nutze einfach die Suche."));
+      } else {
+        catalogueRequestToken += 1;
+      }
     }
 
-    function setTab(tab) {
+    function catalogueSong(item) {
+      const videoId = item?.videoId || ((item?.kind === "song" || item?.kind === "video") ? item?.id : "");
+      if (!videoId) return null;
+      return {
+        ...item,
+        id: videoId,
+        channel: item.channel || item.subtitle || item.artists?.join(", ") || "YouTube Music"
+      };
+    }
+
+    function catalogueSubtitle(item) {
+      const parts = [item?.subtitle || item?.channel, item?.album, item?.year].filter(Boolean);
+      return parts.join(" · ") || ({ artist: "Künstler", album: "Album", playlist: "Playlist", mood: "Stimmung & Genre" }[item?.kind] || "YouTube Music");
+    }
+
+    function renderCatalogue(sections, heading, subtitle, hero = null) {
+      catalogueView.replaceChildren();
+      if (hero) {
+        const heroNode = el("div", "mh-catalog-hero");
+        const heroImage = document.createElement("img");
+        heroImage.src = hero.thumbnail || "";
+        heroImage.alt = "";
+        const heroCopy = el("div");
+        heroCopy.append(
+          el("h2", "", decode(hero.title) || heading),
+          el("p", "", decode(hero.subtitle || hero.description || subtitle || "YouTube Music"))
+        );
+        heroNode.append(heroImage, heroCopy);
+        catalogueView.append(heroNode);
+      } else {
+        const intro = el("div", "mh-catalog-intro");
+        const copy = el("div");
+        copy.append(el("h2", "", heading), el("p", "", subtitle));
+        intro.append(copy);
+        catalogueView.append(intro);
+      }
+
+      const usableSections = (Array.isArray(sections) ? sections : []).filter(section => Array.isArray(section?.items) && section.items.length);
+      if (!usableSections.length) {
+        catalogueView.append(el("p", "mh-empty", "Für diese Ansicht sind gerade keine YouTube-Music-Inhalte verfügbar. Die Suche funktioniert weiterhin."));
+        return;
+      }
+      usableSections.forEach(section => {
+        const block = el("section", "mh-catalog-section");
+        const sectionHeading = el("div", "mh-catalog-heading");
+        sectionHeading.append(el("h3", "", decode(section.title || "Empfehlungen")));
+        const grid = el("div", "mh-card-grid");
+        section.items.slice(0, 12).forEach(item => {
+          const card = el("article", "mh-catalog-card");
+          const openButton = el("button", "mh-catalog-open");
+          openButton.type = "button";
+          openButton.setAttribute("aria-label", decode(item.title || "YouTube-Music-Inhalt öffnen"));
+          const cover = el("div", "mh-catalog-cover", item.kind === "mood" ? "✦" : "♪");
+          if (item.thumbnail) {
+            const image = document.createElement("img");
+            image.src = item.thumbnail;
+            image.alt = "";
+            cover.replaceChildren(image);
+          }
+          const cardCopy = el("div", "mh-catalog-copy");
+          cardCopy.append(el("strong", "", decode(item.title)), el("span", "", decode(catalogueSubtitle(item))));
+          openButton.append(cover, cardCopy);
+          card.append(openButton);
+          const song = catalogueSong(item);
+          if (song) {
+            const add = el("button", "mh-catalog-add");
+            add.type = "button";
+            add.title = "Zur Playlist hinzufügen";
+            add.setAttribute("aria-label", "Zur Playlist hinzufügen");
+            add.append(icon("plus"));
+            add.addEventListener("click", event => {
+              event.stopPropagation();
+              addToPlaylist(song);
+            });
+            card.append(add);
+          }
+          const open = () => openCatalogueItem(item).catch(error => {
+            showError(error.message || "Der Inhalt konnte nicht geöffnet werden.");
+            loadCatalogue(currentSection).catch(() => renderCatalogue([], "Entdecken", "Der Inhalt ist gerade nicht erreichbar."));
+          });
+          openButton.addEventListener("click", open);
+          grid.append(card);
+        });
+        block.append(sectionHeading, grid);
+        catalogueView.append(block);
+      });
+    }
+
+    async function openCatalogueItem(item) {
+      const song = catalogueSong(item);
+      if (song) {
+        mixAnchor = song;
+        await play(song);
+        return;
+      }
+      const token = ++catalogueRequestToken;
+      catalogueLoading.textContent = `${decode(item?.title) || "Inhalt"} wird geladen …`;
+      catalogueView.replaceChildren(catalogueLoading);
+      showError("");
+      let detail = null;
+      if (item?.kind === "album" && item.browseId) detail = await ytMusicAlbum(item.browseId);
+      else if (item?.kind === "artist" && item.browseId) detail = await ytMusicArtist(item.browseId);
+      else if (item?.kind === "playlist" && (item.playlistId || item.browseId)) {
+        detail = await ytMusicPlaylist(item.playlistId || item.browseId);
+      } else if (item?.kind === "mood" && (item.params || item.id)) {
+        const moodItems = await ytMusicMoodPlaylists(item.params || item.id);
+        detail = { ...item, sections: [{ title: "Playlists", items: Array.isArray(moodItems) ? moodItems : [] }] };
+      }
+      if (token !== catalogueRequestToken || disposed) return;
+      if (!detail) throw new Error("Dieser YouTube-Music-Inhalt ist momentan nicht verfügbar.");
+      const sections = Array.isArray(detail.sections) ? [...detail.sections] : [];
+      if (Array.isArray(detail.tracks) && detail.tracks.length) sections.unshift({ title: "Titel", items: detail.tracks });
+      if (Array.isArray(detail.otherVersions) && detail.otherVersions.length) sections.push({ title: "Weitere Versionen", items: detail.otherVersions });
+      if (Array.isArray(detail.related) && detail.related.length) sections.push({ title: "Das könnte dir auch gefallen", items: detail.related });
+      renderCatalogue(sections, decode(detail.title || item.title), "YouTube Music", {
+        ...detail,
+        title: detail.title || item.title,
+        subtitle: detail.subtitle || catalogueSubtitle(item),
+        thumbnail: detail.thumbnail || item.thumbnail
+      });
+    }
+
+    async function loadCatalogue(section, force = false) {
+      const token = ++catalogueRequestToken;
+      const cached = !force && catalogueCache.get(section);
+      const heading = section === "home" ? "Für dich" : "Entdecken";
+      const subtitle = section === "home"
+        ? "Schnelle Auswahl aus dem öffentlichen YouTube-Music-Katalog"
+        : "Neue Veröffentlichungen, Trends und Musik für jede Stimmung";
+      if (cached) {
+        renderCatalogue(cached, heading, subtitle);
+        return;
+      }
+      catalogueLoading.textContent = `${heading} wird geladen …`;
+      catalogueView.replaceChildren(catalogueLoading);
+      const sections = section === "home" ? await ytMusicHome(6) : await ytMusicExplore();
+      if (token !== catalogueRequestToken || disposed || currentSection !== section) return;
+      if (Array.isArray(sections) && sections.length) catalogueCache.set(section, sections);
+      renderCatalogue(sections, heading, subtitle);
+    }
+
+    function setTab(tab, section = tab === "playlist" ? "library" : "discover") {
       currentTab = tab;
+      currentSection = section;
       const isResults = tab === "results";
+      const isCatalogue = isResults && (section === "home" || section === "explore");
       resultTab.classList.toggle("active", isResults);
       playlistTab.classList.toggle("active", !isResults);
-      resultsView.classList.toggle("mh-hidden", !isResults);
-      playlistView.classList.toggle("mh-hidden", isResults);
-      count.textContent = isResults && currentResults.length ? `${currentResults.length} Treffer` : "";
+      tabs.classList.toggle("mh-hidden", isCatalogue);
+      catalogueView.classList.toggle("mh-hidden", !isCatalogue);
+      resultsView.classList.toggle("mh-hidden", !isResults || isCatalogue);
+      playlistOverview.classList.toggle("mh-hidden", isResults);
+      homeNav.classList.toggle("active", currentSection === "home");
+      discoverNav.classList.toggle("active", currentSection === "discover" || currentSection === "explore");
+      libraryNav.classList.toggle("active", currentSection === "library");
+      count.textContent = isResults && !isCatalogue && currentResults.length ? `${currentResults.length} Treffer` : "";
     }
 
     function renderPicker() {
@@ -352,7 +568,32 @@
       });
       deleteList.disabled = playlists.length === 1;
       picker.hidden = playlists.length === 1;
-      playlistTab.textContent = `Playlist${activePlaylist().items.length ? ` (${activePlaylist().items.length})` : ""}`;
+      const active = activePlaylist();
+      playlistTab.textContent = `Mediathek${active.items.length ? ` (${active.items.length})` : ""}`;
+      queueMeta.textContent = active.name;
+      playlistOverviewName.textContent = active.name;
+      playlistOverviewMeta.textContent = active.items.length
+        ? `${active.items.length} ${active.items.length === 1 ? "Titel" : "Titel"} · Warteschlange rechts`
+        : "Noch keine Titel gespeichert";
+      sidebarPlaylists.replaceChildren();
+      playlists.forEach(list => {
+        const button = el("button", `mh-sidebar-list${list.id === playlistId ? " active" : ""}`, list.name);
+        button.type = "button";
+        button.title = list.name;
+        button.addEventListener("click", () => {
+          if (playlistId !== list.id) {
+            mixGeneration += 1;
+            mixResumePending = null;
+            clearMixRetry();
+            playlistId = list.id;
+            mixAnchor = activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
+            renderQueue();
+            if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
+          }
+          setTab("playlist", "library");
+        });
+        sidebarPlaylists.append(button);
+      });
     }
 
     function renderPlayMode() {
@@ -909,6 +1150,7 @@
       const playGeneration = ++transitionGeneration;
       const token = ++playbackToken;
       selected = item;
+      player.classList.remove("mh-player-idle");
       stoppedByUser = false;
       mixResumePending = null;
       clearPlaybackWatchdog();
@@ -926,6 +1168,7 @@
         if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         const title = decode(item.title);
         const artist = decode(item.channel);
+        playerTitle.textContent = title || "Jetzt läuft";
         post({ command: "load", videoId: item.id, token });
         armPlaybackWatchdog(token, item.id);
         try {
@@ -1162,7 +1405,7 @@
           const additions = await fillGenreMix(query, found);
           if (!selected && (additions[0] || found[0])) play(additions[0] || found[0]);
         }
-        setTab("results");
+        setTab("results", "discover");
       } catch (err) {
         showError(err.message || "Die Suche ist fehlgeschlagen.");
       } finally {
@@ -1171,8 +1414,19 @@
         search.append(icon("search"));
       }
     });
-    resultTab.addEventListener("click", () => setTab("results"));
-    playlistTab.addEventListener("click", () => setTab("playlist"));
+    homeNav.addEventListener("click", () => {
+      showError("");
+      setTab("results", "home");
+      loadCatalogue("home").catch(() => renderCatalogue([], "Für dich", "Der Katalog ist gerade nicht erreichbar – nutze einfach die Suche."));
+    });
+    discoverNav.addEventListener("click", () => {
+      showError("");
+      setTab("results", "explore");
+      loadCatalogue("explore").catch(() => renderCatalogue([], "Entdecken", "Der Katalog ist gerade nicht erreichbar – nutze einfach die Suche."));
+    });
+    libraryNav.addEventListener("click", () => setTab("playlist", "library"));
+    resultTab.addEventListener("click", () => setTab("results", "discover"));
+    playlistTab.addEventListener("click", () => setTab("playlist", "library"));
     picker.addEventListener("change", () => {
       mixGeneration += 1;
       mixResumePending = null;
@@ -1181,6 +1435,7 @@
       mixAnchor = activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
       renderQueue();
       menu.open = false;
+      setTab("playlist", "library");
     });
     mixStylePicker.addEventListener("change", () => {
       mixStyle = mixStylePicker.value;
@@ -1233,6 +1488,7 @@
       renderPicker();
       renderQueue();
       menu.open = false;
+      setTab("playlist", "library");
       if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
     deleteList.addEventListener("click", () => {
@@ -1246,6 +1502,7 @@
       renderPicker();
       renderQueue();
       menu.open = false;
+      setTab("playlist", "library");
       if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
 

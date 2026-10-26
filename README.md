@@ -15,6 +15,10 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 ## Funktionen
 
 - Anmeldung über Google und Song-Suche über YouTube Music
+- Dreispaltiger Desktop-Musikclient mit Navigation, Wiedergabe und Warteschlange
+- Startseite mit YouTube-Music-Empfehlungsreihen
+- Entdecken-Ansicht mit Neuerscheinungen, Trends, Videos, Genres und Stimmungen
+- Detailansichten für öffentliche Alben, Künstler und Playlisten
 - Wiedergabe im integrierten, sichtbaren YouTube-Player
 - Steuerung über die zentrale Player-Leiste von WebRadio
 - Beliebig viele lokal gespeicherte Playlisten
@@ -27,7 +31,7 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Wiedergabe-Rückfall ohne Stille, falls vorübergehend kein neuer Treffer verfügbar ist
 - Filter gegen komplette Alben, Konzerte und stundenlange Zusammenstellungen
 - Automatisches Überspringen von Videos mit Einbettungssperre
-- Dezente, platzsparende Oberfläche im WebRadio-Design
+- Dezente, responsive Oberfläche mit eigener MediaHub-Identität
 
 ## Installation
 
@@ -51,10 +55,12 @@ Weitere Hinweise stehen in [INSTALL.md](INSTALL.md).
 ## Bedienung
 
 1. MediaHub in der Navigation öffnen und mit Google anmelden.
-2. Nach einem Titel, Künstler oder Album suchen.
-3. Einen Treffer direkt starten oder über `+` zur Playlist hinzufügen.
-4. In der Playlist den Wiedergabemodus auswählen.
-5. Eine Mix-Art wählen und mit dem Funkeln-Symbol den Auto-Mix aktivieren.
+2. Auf der Startseite Empfehlungen öffnen oder unter **Entdecken** durch neue
+   Veröffentlichungen, Trends und Genres stöbern.
+3. Alternativ nach einem Titel, Künstler oder Album suchen.
+4. Einen Titel direkt starten oder über `+` zur lokalen Playlist hinzufügen.
+5. In der Mediathek den Wiedergabemodus auswählen.
+6. Eine Mix-Art wählen und mit dem Funkeln-Symbol den Auto-Mix aktivieren.
 
 Auto-Mix fragt zuerst das zu einem Song gehörende YouTube-Music-Radio ab. So
 entsteht aus Falling In Reverse beispielsweise eine Mischung mit verwandten
@@ -98,6 +104,9 @@ bisherigen WebRadio-Suche weiter.
   deshalb sichtbar bleiben.
 - MediaHub befindet sich in der Alpha-Phase und seine Schnittstellen können sich
   gemeinsam mit dem WebRadio Plugin SDK noch ändern.
+- Startseite, Entdecken und öffentliche Detailseiten werden anonym über
+  `ytmusicapi` geladen. Sie sind deshalb nicht mit der persönlichen
+  YouTube-Music-Historie, den Likes oder der privaten Mediathek synchronisiert.
 - Playlisten werden aktuell lokal im WebRadio-Profil gespeichert und nicht
   zwischen Geräten synchronisiert.
 

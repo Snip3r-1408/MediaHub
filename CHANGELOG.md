@@ -2,6 +2,42 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.12.0 – 2026-10-26
+
+### Neuer Musikclient
+
+- Eigenständige dreispaltige MediaHub-Oberfläche mit kompakter Navigation,
+  zentraler Wiedergabe und dauerhafter „Als Nächstes“-Warteschlange
+- Startseite mit Empfehlungsreihen aus dem öffentlichen YouTube-Music-Katalog
+- Entdecken-Ansicht für Neuerscheinungen, Trends, Musikvideos sowie Stimmungen
+  und Genres
+- Album-, Künstler-, Playlist- und Genre-Kacheln öffnen echte Detailansichten
+- Katalogtitel lassen sich direkt starten oder zur lokalen Playlist hinzufügen
+- Playlisten sind zusätzlich in der internen Navigation erreichbar
+- Ruhigere Proportionen, kompakte Symbolsteuerung und responsive Icon-Leiste für
+  den begrenzten Platz innerhalb von WebRadio
+
+### YouTube-Music-Datenoberfläche
+
+- Neue lokal geschützte Endpunkte für Startseite, Entdecken, Charts, Alben,
+  Künstler, Playlisten und Stimmungs-Playlisten
+- Kategorisierte YouTube-Music-Suche für Songs, Videos, Alben, Künstler und
+  öffentliche Playlisten vorbereitet
+- Einheitliches Kartenmodell mit Cover, Künstler, Album, Jahr, Laufzeit und
+  Verfügbarkeitsangaben
+- Detail- und Objektantworten werden neben Songlisten sicher an den Renderer
+  weitergegeben
+
+### Sicherheit und Kompatibilität
+
+- Die Katalogschnittstelle bleibt anonym und erhält keine Google-OAuth-Daten
+- Es werden weiterhin keine Stream-URLs ermittelt; die Wiedergabe bleibt im
+  offiziellen sichtbaren YouTube-Player
+- Eingaben für IDs, Länder, Suchfilter und Genre-Parameter werden validiert
+- Alle bisherigen Player-, Mixer-, Playlist- und Token-Schutzprüfungen bleiben
+  erhalten; neue Integrationstests decken Katalognavigation und Detailantworten
+  ab
+
 ## 0.11.1 – 2026-10-04
 
 ### Behoben

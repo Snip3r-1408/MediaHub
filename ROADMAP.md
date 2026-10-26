@@ -30,11 +30,20 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 
 ## Oberfläche
 
-- Noch kompaktere Darstellung für kleine Fenster
 - Verbesserte Tastaturbedienung und Barrierefreiheit
 - Tooltips und kurze Erklärungen für Wiedergabemodi
-- Eigene leere Zustände, Ladeanimationen und dezente Benachrichtigungen
+- Dezente Ladeanimationen und Benachrichtigungen statt reiner Textzustände
 - Optionale Mini-Player-Ansicht
+
+## YouTube-Music-Katalog
+
+- Weitere Suchfilter direkt in der Oberfläche auswählbar machen
+- Chart-Land in den Einstellungen wählbar machen
+- Künstler- und Albumdetails um weitere Metadaten ergänzen
+- Navigation mit Zurück-Funktion und zuletzt geöffneten Katalogseiten
+- Persönliche Likes und private YouTube-Music-Mediathek erst ergänzen, wenn der
+  WebRadio-Core dafür eine ausdrücklich freigegebene, sichere Schnittstelle
+  bereitstellt
 
 ## Langfristig
 

@@ -9,6 +9,17 @@ const { spawn } = require("child_process");
 
 const MAX_BODY_BYTES = 64 * 1024;
 const HELPER_TIMEOUT = 15000;
+const ROUTE_ACTIONS = Object.freeze({
+  "/v1/search": "search",
+  "/v1/radio": "radio",
+  "/v1/home": "home",
+  "/v1/explore": "explore",
+  "/v1/charts": "charts",
+  "/v1/album": "album",
+  "/v1/artist": "artist",
+  "/v1/playlist": "playlist",
+  "/v1/mood-playlists": "mood_playlists"
+});
 
 function pythonCandidates(platform = process.platform) {
   return platform === "win32"
@@ -199,7 +210,7 @@ class YtMusicBridge {
     if (request.method === "GET" && request.url === "/health") {
       return this._json(response, 200, { available: this.ready });
     }
-    const action = request.url === "/v1/search" ? "search" : request.url === "/v1/radio" ? "radio" : "";
+    const action = ROUTE_ACTIONS[request.url] || "";
     if (request.method !== "POST" || !action) return this._json(response, 404, { error: "Nicht gefunden" });
     try {
       const chunks = [];
@@ -243,4 +254,4 @@ class YtMusicBridge {
   }
 }
 
-module.exports = { YtMusicBridge, allowedOrigin, pythonCandidates };
+module.exports = { YtMusicBridge, ROUTE_ACTIONS, allowedOrigin, pythonCandidates };
