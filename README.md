@@ -26,6 +26,7 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Wiedergabe der Reihe nach, im Kreis oder zufällig
 - Auto-Mix mit echten Titel-Radios von YouTube Music und Genre-Daten von MusicBrainz
 - Vier Mix-Arten: ähnliche Künstler, gleiches Genre, breiter Mix und Überraschung
+- Strenge Künstlerprüfung verhindert Genre-Sprünge im Modus „Gleiches Genre“
 - Rollender Mix-Puffer mit zwölf vorbereiteten Titeln
 - Automatisches Nachladen, bevor das Ende der Warteschlange erreicht wird
 - Wechselnde Genre-, Entdeckungs-, Jahres- und Stimmungsanfragen

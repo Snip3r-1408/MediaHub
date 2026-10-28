@@ -540,7 +540,22 @@ test("the endless mixer prefers YouTube Music radio and keeps the classic search
 test("same-genre mode keeps a fixed manual seed and limits radio drift", async () => {
   const metalSeed = song("metal-seed", "Falling In Reverse");
   const driftedTrack = { ...song("rap-tail", "Rap Artist"), mediaHubAutoAdded: true };
-  const radioTracks = Array.from({ length: 15 }, (_value, index) => song(`radio-${index}`, `Radio Artist ${index}`));
+  const radioTracks = [
+    song("wrong-genre", "Hip Hop Artist"),
+    ...Array.from({ length: 14 }, (_value, index) => song(`radio-${index}`, `Metal Radio Artist ${index}`))
+  ];
+  const genreCache = {
+    "falling in reverse": { tags: ["metalcore", "post-hardcore"], savedAt: Date.now() },
+    "hip hop artist": { tags: ["hip hop", "rap"], savedAt: Date.now() }
+  };
+  for (let index = 0; index < 14; index += 1) {
+    genreCache[`metal radio artist ${index}`] = { tags: ["metalcore"], savedAt: Date.now() };
+  }
+  for (let call = 1; call <= 4; call += 1) {
+    for (let index = 0; index < 12; index += 1) {
+      genreCache[`metal artist ${call}-${index}`] = { tags: ["alternative metal"], savedAt: Date.now() };
+    }
+  }
   const harness = await createHarness({
     storage: {
       "mediahub-auto-mix-v1": "true",
@@ -548,9 +563,7 @@ test("same-genre mode keeps a fixed manual seed and limits radio drift", async (
       "mediahub-playlists-v1": JSON.stringify([
         { id: "queue", name: "Queue", items: [metalSeed, driftedTrack] }
       ]),
-      "mediahub-genre-cache-v1": JSON.stringify({
-        "falling in reverse": { tags: ["metalcore", "post-hardcore"], savedAt: Date.now() }
-      })
+      "mediahub-genre-cache-v1": JSON.stringify(genreCache)
     },
     ytMusic(route) {
       return route === "/v1/radio" ? radioTracks : [];
@@ -564,6 +577,7 @@ test("same-genre mode keeps a fixed manual seed and limits radio drift", async (
   const radioCall = harness.framePosts.find(call => call.source === "mediahub-ytmusic-parent" && call.route === "/v1/radio");
   assert.equal(radioCall.payload.videoId, "metal-seed", "the last auto-added title must not become the genre anchor");
   assert.ok(additions.filter(item => item.id.startsWith("radio-")).length <= 4, "free radio suggestions are capped in same-genre mode");
+  assert.equal(additions.some(item => item.id === "wrong-genre"), false, "a hip-hop candidate must not enter a metal mix");
   assert.ok(harness.searchCalls.some(query => query.toLowerCase().includes("metalcore")));
 });
 

@@ -8,6 +8,7 @@
   const AUTO_MIX_KEY = "mediahub-auto-mix-v1";
   const MIX_STYLE_KEY = "mediahub-mix-style-v1";
   const GENRE_CACHE_KEY = "mediahub-genre-cache-v1";
+  const STRICT_GENRE_MIGRATION_KEY = "mediahub-strict-genre-mix-v1";
   const MIX_BUFFER_TARGET = 12;
   const MIX_BUFFER_LOW_WATER = 5;
   const MIX_SEARCH_TIMEOUT = 10000;
@@ -226,6 +227,13 @@
     const api = window.playerAPI;
     const root = el("section", "mediahub");
     let playlists = loadPlaylists();
+    if (localStorage.getItem(STRICT_GENRE_MIGRATION_KEY) !== "1") {
+      playlists.forEach(list => {
+        list.items = list.items.filter(item => !item.mediaHubAutoAdded);
+      });
+      localStorage.setItem(STORE_KEY, JSON.stringify(playlists));
+      localStorage.setItem(STRICT_GENRE_MIGRATION_KEY, "1");
+    }
     let playlistId = playlists[0].id;
     let selected = null;
     let currentResults = [];
@@ -694,6 +702,15 @@
       }
     }
 
+    function clearGeneratedQueue() {
+      const list = activePlaylist();
+      const kept = list.items.filter(item => !item.mediaHubAutoAdded || item.id === selected?.id);
+      if (kept.length === list.items.length) return;
+      list.items = kept;
+      save();
+      renderQueue();
+    }
+
     function forgetBlockedItem(videoId) {
       if (!videoId) return;
       const list = activePlaylist();
@@ -739,6 +756,14 @@
         .trim();
     }
 
+    function artistIdentity(value) {
+      return cleanArtist(value)
+        .toLocaleLowerCase()
+        .replace(/^the\s+/, "")
+        .replace(/[^\p{L}\p{N}]+/gu, " ")
+        .trim();
+    }
+
     function seedArtist(item, fallback = "") {
       const title = decode(item?.title || "").replace(/&quot;/gi, '"');
       const titleArtist = title.split(/\s+(?:-|–|—|\|)\s+/)[0];
@@ -746,6 +771,39 @@
       const channel = cleanArtist(item?.channel);
       if (channel && !/(records|music|entertainment|official channel)$/i.test(channel)) return channel;
       return cleanArtist(fallback.split(/\s+(?:-|–|—)\s+/)[0]);
+    }
+
+    function localGenreTags(item, fallback = "") {
+      const hint = `${fallback} ${decode(item?.title || "")} ${decode(item?.channel || "")} ${(item?.artists || []).join(" ")} ${decode(item?.album || "")}`.toLowerCase();
+      if (/(metalcore|deathcore|post[- ]hardcore|nu[- ]metal|heavy[- ]metal|alternative[- ]metal|\bmetal\b)/.test(hint)) {
+        return ["metalcore", "post-hardcore", "alternative metal"];
+      }
+      if (/(hard[- ]rock|alternative[- ]rock|pop[- ]punk|\bpunk\b|\bemo\b|\bgrunge\b|\brock\b)/.test(hint)) {
+        return ["alternative rock", "hard rock"];
+      }
+      if (/(hip[- ]?hop|\brap\b|\btrap\b|\bdrill\b|\bgrime\b)/.test(hint)) return ["hip hop", "rap"];
+      if (/(techno|\bhouse\b|\btrance\b|dubstep|drum\s*(?:and|&)\s*bass|\bedm\b|electronic)/.test(hint)) return ["electronic"];
+      if (/(country|americana|bluegrass|\bfolk\b)/.test(hint)) return ["country"];
+      if (/(rhythm\s*(?:and|&)\s*blues|\br&b\b|\bsoul\b|\bfunk\b)/.test(hint)) return ["r&b"];
+      if (/(synth[- ]?pop|k[- ]?pop|\bpop\b)/.test(hint)) return ["pop"];
+      if (/(\bjazz\b|bebop|swing)/.test(hint)) return ["jazz"];
+      if (/(classical|orchestra|symphon)/.test(hint)) return ["classical"];
+      return [];
+    }
+
+    function genreFamilies(tags) {
+      const text = (tags || []).join(" ").toLowerCase();
+      const families = new Set();
+      if (/(metal|metalcore|deathcore|post[- ]hardcore|hardcore)/.test(text)) families.add("metal");
+      if (/(rock|punk|emo|grunge)/.test(text)) families.add("rock");
+      if (/(hip[- ]?hop|\brap\b|trap|drill|grime)/.test(text)) families.add("hiphop");
+      if (/(electronic|techno|house|trance|dubstep|drum\s*(?:and|&)\s*bass|\bedm\b)/.test(text)) families.add("electronic");
+      if (/(country|americana|bluegrass|folk)/.test(text)) families.add("country");
+      if (/(rhythm\s*(?:and|&)\s*blues|\br&b\b|soul|funk)/.test(text)) families.add("rnb");
+      if (/(synth[- ]?pop|k[- ]?pop|\bpop\b)/.test(text)) families.add("pop");
+      if (/jazz|bebop|swing/.test(text)) families.add("jazz");
+      if (/classical|orchestra|symphon/.test(text)) families.add("classical");
+      return families;
     }
 
     function broadGenre(tags) {
@@ -797,7 +855,8 @@
         });
         if (!response.ok) throw new Error(`Musikdatenbank antwortet mit ${response.status}`);
         const data = await response.json();
-        const match = data.artists?.find(entry => entry.name?.toLocaleLowerCase() === key) || data.artists?.[0];
+        const identity = artistIdentity(artist);
+        const match = data.artists?.find(entry => artistIdentity(entry?.name) === identity);
         const tags = (match?.tags || [])
           .filter(tag => tag?.name && tag.count >= 1)
           .sort((a, b) => (b.count || 0) - (a.count || 0))
@@ -816,17 +875,50 @@
       }
     }
 
+    async function strictGenreProfile(item, fallback = "") {
+      const artist = seedArtist(item, fallback);
+      let tags = localGenreTags(item, fallback);
+      if (artist) {
+        try {
+          const remoteTags = await findGenres(artist);
+          if (remoteTags.length) tags = remoteTags;
+        } catch { /* the local evidence remains usable */ }
+      }
+      return { artist: artistIdentity(artist), tags, families: genreFamilies(tags) };
+    }
+
+    async function filterStrictGenre(items, profile, limit) {
+      if (!profile?.families?.size || !limit) return [];
+      const accepted = [];
+      for (const item of items || []) {
+        if (!item?.id || isLongForm(item)) continue;
+        const artist = seedArtist(item);
+        const identity = artistIdentity(artist);
+        if (identity && identity === profile.artist) {
+          accepted.push(item);
+        } else {
+          let tags = localGenreTags(item);
+          if (artist) {
+            try {
+              const remoteTags = await findGenres(artist);
+              if (remoteTags.length) tags = remoteTags;
+            } catch { /* an unverified candidate is rejected below */ }
+          }
+          const candidateFamilies = genreFamilies(tags);
+          if ([...candidateFamilies].some(family => profile.families.has(family))) accepted.push(item);
+        }
+        if (accepted.length >= limit) break;
+      }
+      return accepted;
+    }
+
     async function mixQueries(item, fallback = "", offset = mixRound) {
       const artist = seedArtist(item, fallback);
       let tags = [];
       if (artist) {
         try { tags = await findGenres(artist); } catch { /* local fallback below */ }
       }
-      if (!tags.length) {
-        const hint = `${fallback} ${decode(item?.title || "")}`.toLowerCase();
-        if (/(metal|metalcore|falling in reverse)/.test(hint)) tags = ["metalcore", "post-hardcore", "alternative metal"];
-        else if (/(rock|punk|emo)/.test(hint)) tags = ["alternative rock", "pop punk"];
-      }
+      if (!tags.length) tags = localGenreTags(item, fallback);
       const chosen = (mixStyle === "wide" ? broadGenre(tags) : tags).filter(Boolean);
       const primary = chosen[0] || "alternative music";
       const secondary = chosen[1] || primary;
@@ -929,9 +1021,13 @@
     }
 
     async function fillGenreMix(seed, firstResults = []) {
-      const additions = mergeIntoPlaylist(firstResults, 4, 2);
+      const seedItem = firstResults[0] || mixAnchor || selected;
+      const candidates = mixStyle === "genre"
+        ? await filterStrictGenre(firstResults, await strictGenreProfile(seedItem, seed), 4)
+        : firstResults;
+      const additions = mergeIntoPlaylist(candidates, 4, 2);
       if (!seed || additions.length >= MIX_BUFFER_TARGET) return additions;
-      additions.push(...await ensureMixBuffer({ force: true, seedItem: firstResults[0] }));
+      additions.push(...await ensureMixBuffer({ force: true, seedItem }));
       return additions;
     }
 
@@ -1038,13 +1134,24 @@
           : [seed, ...targetPlaylist.items.filter(item => recentIds.has(item.id)).reverse()])
           .filter((item, index, all) => item?.id && all.findIndex(candidate => candidate?.id === item.id) === index);
         const radioSeed = radioSeeds.length ? radioSeeds[mixRound % radioSeeds.length] : null;
+        const genreProfile = mixStyle === "genre"
+          ? await strictGenreProfile(mixAnchor || seed, lastSearchQuery || input.value.trim())
+          : null;
+        if (mixStyle === "genre" && !genreProfile?.families?.size) {
+          mixSource = "Genre nicht sicher erkannt";
+          scheduleMixRetry();
+          return [];
+        }
         const radioWanted = mixStyle === "genre" ? Math.min(wanted, 4) : wanted;
         mixRound = (mixRound + 1) % 100000;
         try {
           const radioTracks = await ytMusicRadio(radioSeed?.id, Math.max(25, wanted * 2));
           if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
           if (radioTracks?.length) {
-            additions.push(...mergeIntoPlaylist(radioTracks, radioWanted, 2, targetPlaylist));
+            const candidates = mixStyle === "genre"
+              ? await filterStrictGenre(radioTracks, genreProfile, radioWanted)
+              : radioTracks;
+            additions.push(...mergeIntoPlaylist(candidates, radioWanted, 2, targetPlaylist));
             if (additions.length) mixSource = mixStyle === "genre" ? "Fester Genre-Mix" : "YouTube Music Radio";
           }
         } catch { /* use the classic genre search below */ }
@@ -1058,7 +1165,10 @@
           try {
             const suggestions = await searchWithTimeout(query);
             if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) break;
-            additions.push(...mergeIntoPlaylist(suggestions || [], wanted - additions.length, 2, targetPlaylist));
+            const candidates = mixStyle === "genre"
+              ? await filterStrictGenre(suggestions || [], genreProfile, wanted - additions.length)
+              : (suggestions || []);
+            additions.push(...mergeIntoPlaylist(candidates, wanted - additions.length, 2, targetPlaylist));
             if (additions.length && !["YouTube Music Radio", "Fester Genre-Mix"].includes(mixSource)) {
               mixSource = "Magischer Mix";
             }
@@ -1433,6 +1543,7 @@
         mixRound = 0;
         mixRetryAttempt = 0;
         clearMixRetry();
+        clearGeneratedQueue();
       }
       search.disabled = true;
       search.replaceChildren();
@@ -1485,6 +1596,7 @@
       mixRound = 0;
       mixRetryAttempt = 0;
       clearMixRetry();
+      clearGeneratedQueue();
       if (!mixAnchor) mixAnchor = selected || currentResults[0] || activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
       if (autoMix) ensureMixBuffer({ force: true }).catch(() => scheduleMixRetry());
     });
@@ -1506,6 +1618,7 @@
       } else {
         mixGeneration += 1;
         mixRetryAttempt = 0;
+        clearGeneratedQueue();
         mixAnchor = selected || currentResults[0] || activePlaylist().items.find(item => !item.mediaHubAutoAdded) || null;
         fillGenreMix(lastSearchQuery || input.value.trim(), currentResults).then(additions => {
           if (!selected && (additions[0] || currentResults[0])) play(additions[0] || currentResults[0]);

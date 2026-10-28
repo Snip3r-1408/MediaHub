@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.1 – 2026-10-28
+
+### Behoben
+
+- „Gleiches Genre“ prüft nun jeden automatisch vorgeschlagenen Künstler gegen
+  die feste Genre-Familie des ursprünglichen Starttitels
+- Unpassende Radio- und Suchtreffer wie Hip-Hop in einem Metal-Mix werden vor
+  dem Einfügen in „Als Nächstes“ verworfen
+- MusicBrainz-Ergebnisse werden nur noch bei einem eindeutigen Künstlernamen
+  verwendet; ähnlich benannte Künstler können das Genre nicht mehr verfälschen
+- Kann das Startgenre nicht sicher ermittelt werden, wartet der Mixer auf einen
+  neuen Versuch, statt die Warteschlange mit beliebiger Musik zu füllen
+
 ## 0.13.0 – 2026-10-28
 
 ### Fließendes Musikclient-Design
