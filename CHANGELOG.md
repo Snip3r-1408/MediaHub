@@ -2,6 +2,28 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.0 – 2026-10-28
+
+### Fließendes Musikclient-Design
+
+- Offene, horizontal scrollbare Musikregale ersetzen die bisherige kompakte
+  Kartenwand und rücken Cover, Künstler und Alben stärker in den Mittelpunkt
+- Größere Überschriften, ruhigere Flächen und eine klarere Hierarchie orientieren
+  sich am Bediengefühl moderner Musikclients, ohne YouTube Music zu kopieren
+- MediaHub übernimmt nun Farben, Flächen, Texte, Rahmen und Akzente des aktiven
+  WebRadio-Themes und bleibt durch Marke, Violett und Animationen erkennbar
+- Künstler erscheinen mit runden Covern; Alben, Songs, Genres und Playlisten
+  behalten passende eigene Darstellungen
+- Schnellauswahl-Chips springen direkt zu den Empfehlungsbereichen der Startseite
+
+### Platz und Wiedergabe
+
+- Bei begrenzter Breite wird die interne Seitenleiste automatisch zu einer
+  horizontalen Navigation, damit Katalog und Player mehr Raum erhalten
+- Suchergebnisse erscheinen als ruhige Musikliste statt als zweispaltige Karten
+- Das Cover des laufenden Titels erzeugt dezent eine farbige Hintergrundstimmung
+- Warteschlange, Player, Playlisten und Mixer bleiben vollständig erhalten
+
 ## 0.12.0 – 2026-10-26
 
 ### Neuer Musikclient

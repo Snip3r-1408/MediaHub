@@ -15,7 +15,8 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 ## Funktionen
 
 - Anmeldung über Google und Song-Suche über YouTube Music
-- Dreispaltiger Desktop-Musikclient mit Navigation, Wiedergabe und Warteschlange
+- Theme-adaptiver Musikclient mit Navigation, Wiedergabe und Warteschlange
+- Offene Empfehlungsregale mit großen Covern und fließender Katalognavigation
 - Startseite mit YouTube-Music-Empfehlungsreihen
 - Entdecken-Ansicht mit Neuerscheinungen, Trends, Videos, Genres und Stimmungen
 - Detailansichten für öffentliche Alben, Künstler und Playlisten
@@ -31,7 +32,8 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Wiedergabe-Rückfall ohne Stille, falls vorübergehend kein neuer Treffer verfügbar ist
 - Filter gegen komplette Alben, Konzerte und stundenlange Zusammenstellungen
 - Automatisches Überspringen von Videos mit Einbettungssperre
-- Dezente, responsive Oberfläche mit eigener MediaHub-Identität
+- Responsive Oberfläche, die sich in Dark, Default, Neon und Carbon einfügt und
+  trotzdem ihre eigene MediaHub-Identität behält
 
 ## Installation
 

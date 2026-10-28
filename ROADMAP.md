@@ -34,6 +34,7 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 - Tooltips und kurze Erklärungen für Wiedergabemodi
 - Dezente Ladeanimationen und Benachrichtigungen statt reiner Textzustände
 - Optionale Mini-Player-Ansicht
+- Weitere Feinarbeit an Abständen und Katalogregalen anhand längerer Praxistests
 
 ## YouTube-Music-Katalog
 
