@@ -2,6 +2,23 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.6 – 2026-10-29
+
+### Normale Wiedergabe stabilisiert
+
+- YouTube-Music-Audiokatalog-IDs werden bereits vor dem Start bevorzugt in eine
+  passende offizielle Musikvideo-Version umgewandelt
+- Alternative Versionen werden nun nach exaktem Titel, Künstler, Videotyp und
+  Laufzeit bewertet; Reactions, Cover, Karaoke und lange Fremdversionen werden
+  deutlich abgewertet
+- Die Fehlergrenze wird erst nach zwölf Sekunden stabiler Wiedergabe
+  zurückgesetzt. Kurze falsche „Playing“-Signale können deshalb keine endlose
+  Überspring-Schleife mehr auslösen
+- Dauerhaft gesperrte Video-IDs werden für 30 Tage lokal gespeichert und nicht
+  erneut in den Magischen Mixer aufgenommen
+- Nicht verfügbare YouTube-Music-Treffer gelangen nicht mehr in die
+  Warteschlange
+
 ## 0.13.5 – 2026-10-29
 
 ### Wiedergabe-Reparatur

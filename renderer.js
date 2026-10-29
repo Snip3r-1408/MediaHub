@@ -8,6 +8,7 @@
   const AUTO_MIX_KEY = "mediahub-auto-mix-v1";
   const MIX_STYLE_KEY = "mediahub-mix-style-v1";
   const GENRE_CACHE_KEY = "mediahub-genre-cache-v2";
+  const FAILED_VIDEOS_KEY = "mediahub-failed-videos-v1";
   const STRICT_GENRE_MIGRATION_KEY = "mediahub-strict-genre-mix-v1";
   const MIX_BUFFER_TARGET = 12;
   const MIX_BUFFER_LOW_WATER = 5;
@@ -18,6 +19,9 @@
   const MIX_HISTORY_KEEP = 6;
   const MAX_CONSECUTIVE_PLAYBACK_FAILURES = 5;
   const MAX_ALTERNATE_ATTEMPTS = 2;
+  const PLAYBACK_STABLE_MS = 12000;
+  const FAILED_VIDEO_TTL = 30 * 24 * 60 * 60 * 1000;
+  const MAX_FAILED_VIDEO_CACHE = 500;
   let disposeView = null;
   let ytMusicClientPromise = null;
   let ytMusicClientFrame = null;
@@ -255,7 +259,17 @@
     let autoMix = localStorage.getItem(AUTO_MIX_KEY) === "true";
     let mixStyle = localStorage.getItem(MIX_STYLE_KEY) || "genre";
     let lastSearchQuery = "";
-    const failedVideoIds = new Set();
+    let failedVideoCache = {};
+    try {
+      const storedFailures = JSON.parse(localStorage.getItem(FAILED_VIDEOS_KEY) || "{}");
+      const cutoff = Date.now() - FAILED_VIDEO_TTL;
+      failedVideoCache = Object.fromEntries(
+        Object.entries(storedFailures || {})
+          .filter(([videoId, failedAt]) => videoId && Number(failedAt) >= cutoff)
+          .slice(-MAX_FAILED_VIDEO_CACHE)
+      );
+    } catch { failedVideoCache = {}; }
+    const failedVideoIds = new Set(Object.keys(failedVideoCache));
     const alternateAttempts = new Map();
     const playedVideoIds = new Set();
     let mixRound = 0;
@@ -263,6 +277,7 @@
     let activeAdvanceToken = 0;
     let advanceQueuedToken = 0;
     let blockedRecoveries = 0;
+    let stablePlaybackTimer = null;
     let lastGenreRequest = 0;
     let mixRefillPromise = null;
     let mixRefillGeneration = 0;
@@ -729,6 +744,36 @@
       renderQueue();
     }
 
+    function rememberFailedVideo(videoId) {
+      if (!videoId) return;
+      failedVideoIds.add(videoId);
+      failedVideoCache[videoId] = Date.now();
+      const entries = Object.entries(failedVideoCache)
+        .sort((left, right) => Number(left[1]) - Number(right[1]))
+        .slice(-MAX_FAILED_VIDEO_CACHE);
+      failedVideoCache = Object.fromEntries(entries);
+      localStorage.setItem(FAILED_VIDEOS_KEY, JSON.stringify(failedVideoCache));
+    }
+
+    function clearStablePlaybackTimer() {
+      if (stablePlaybackTimer) window.clearTimeout(stablePlaybackTimer);
+      stablePlaybackTimer = null;
+    }
+
+    function confirmStablePlayback(token = playbackToken, videoId = selected?.id) {
+      if (token !== playbackToken || videoId !== selected?.id || disposed) return;
+      clearStablePlaybackTimer();
+      blockedRecoveries = 0;
+    }
+
+    function armStablePlaybackTimer(token, videoId) {
+      clearStablePlaybackTimer();
+      stablePlaybackTimer = window.setTimeout(() => {
+        stablePlaybackTimer = null;
+        confirmStablePlayback(token, videoId);
+      }, PLAYBACK_STABLE_MS);
+    }
+
     function compactAutoMixQueue() {
       if (!autoMix || !selected?.id) return;
       const list = activePlaylist();
@@ -1031,7 +1076,7 @@
       });
       const additions = [];
       for (const item of items) {
-        if (!item?.id || known.has(item.id) || failedVideoIds.has(item.id) || isLongForm(item)) continue;
+        if (!item?.id || item.isAvailable === false || known.has(item.id) || failedVideoIds.has(item.id) || isLongForm(item)) continue;
         const titleKey = songKey(item);
         if (titleKey && knownSongs.has(titleKey)) continue;
         const key = artistKey(item);
@@ -1060,7 +1105,7 @@
     }
 
     function isPlayable(item) {
-      return Boolean(item?.id) && !item.mediaHubUnavailable && !failedVideoIds.has(item.id) && !isLongForm(item);
+      return Boolean(item?.id) && item.isAvailable !== false && !item.mediaHubUnavailable && !failedVideoIds.has(item.id) && !isLongForm(item);
     }
 
     function playableQueue() {
@@ -1096,6 +1141,32 @@
       return `${artistIdentity(seedArtist(item))}|${songKey(item)}`;
     }
 
+    function alternativeScore(candidate, item, artist, targetTitle) {
+      const candidateTitle = songKey(candidate);
+      const candidateArtist = artistIdentity(seedArtist(candidate));
+      const targetArtist = artistIdentity(artist);
+      const videoType = String(candidate?.videoType || "").toUpperCase();
+      const candidateDuration = durationSeconds(candidate);
+      const targetDuration = durationSeconds(item);
+      const rawTitle = decode(candidate?.title || "").toLowerCase();
+      let score = 0;
+      if (candidateTitle === targetTitle) score += 12;
+      else if (candidateTitle.includes(targetTitle) || targetTitle.includes(candidateTitle)) score += 6;
+      if (candidateArtist && candidateArtist === targetArtist) score += 10;
+      if (videoType === "MUSIC_VIDEO_TYPE_OMV") score += 9;
+      else if (videoType.includes("OFFICIAL")) score += 6;
+      else if (videoType === "MUSIC_VIDEO_TYPE_UGC") score -= 2;
+      if (candidateDuration && targetDuration) {
+        const difference = Math.abs(candidateDuration - targetDuration);
+        if (difference <= 8) score += 6;
+        else if (difference <= 25) score += 3;
+        else if (difference > 90) score -= 6;
+      }
+      if (/\b(?:reaction|cover|karaoke|remix|amv|tutorial)\b/i.test(rawTitle)) score -= 8;
+      if (/\b(?:live|concert|performance)\b/i.test(rawTitle)) score -= 4;
+      return score;
+    }
+
     async function findPlayableAlternative(item) {
       const key = alternativeKey(item);
       const attempts = alternateAttempts.get(key) || 0;
@@ -1104,25 +1175,34 @@
       const artist = seedArtist(item);
       const title = decode(item?.title || "");
       const targetTitle = songKey({ title });
-      const candidates = await ytMusicSearch(`${artist} ${title} official music video`, 12, "videos");
+      let candidates = await ytMusicSearch(`${artist} ${title} official music video`, 12, "videos");
+      if (!candidates?.length && auth?.search) {
+        try { candidates = await auth.search(`${artist} ${title} official music video`); } catch { candidates = []; }
+      }
       return (candidates || [])
         .filter(candidate => {
           const videoId = candidate?.videoId || candidate?.id;
-          if (!videoId || videoId === item.id || failedVideoIds.has(videoId) || isLongForm(candidate)) return false;
+          if (!videoId || videoId === item.id || candidate.isAvailable === false || failedVideoIds.has(videoId) || isLongForm(candidate)) return false;
           const candidateTitle = songKey(candidate);
-          return !targetTitle || candidateTitle.includes(targetTitle);
+          return !targetTitle || candidateTitle.includes(targetTitle) || targetTitle.includes(candidateTitle);
         })
-        .sort((left, right) => {
-          const leftArtist = artistIdentity(seedArtist(left)) === artistIdentity(artist) ? 1 : 0;
-          const rightArtist = artistIdentity(seedArtist(right)) === artistIdentity(artist) ? 1 : 0;
-          return rightArtist - leftArtist;
-        })
+        .sort((left, right) => alternativeScore(right, item, artist, targetTitle) - alternativeScore(left, item, artist, targetTitle))
         .map(candidate => ({
           ...item,
           ...candidate,
           id: candidate.videoId || candidate.id,
+          kind: "video",
+          mediaHubPlaybackVersion: true,
           mediaHubAlternateOf: item.mediaHubAlternateOf || item.id
         }))[0] || null;
+    }
+
+    function shouldResolvePlaybackVersion(item) {
+      if (!item?.id || item.mediaHubPlaybackVersion || item.mediaHubAlternateOf) return false;
+      const videoType = String(item.videoType || "").toUpperCase();
+      if (videoType === "MUSIC_VIDEO_TYPE_OMV" || videoType.includes("OFFICIAL_SOURCE")) return false;
+      return item.source === "ytmusicapi"
+        && (videoType === "MUSIC_VIDEO_TYPE_ATV" || item.kind === "song" || Boolean(item.album));
     }
 
     function replaceQueueVersion(original, replacement) {
@@ -1146,9 +1226,11 @@
       api?.reportProviderState?.(ID, { state: "stopped" });
     }
 
-    async function recoverPlaybackFailure(expectedToken, item, message) {
+    async function recoverPlaybackFailure(expectedToken, item, message, { permanent = true } = {}) {
       if (!item?.id || expectedToken !== playbackToken || selected?.id !== item.id || disposed) return;
-      failedVideoIds.add(item.id);
+      clearStablePlaybackTimer();
+      if (permanent) rememberFailedVideo(item.id);
+      else failedVideoIds.add(item.id);
       blockedRecoveries += 1;
       showError("Diese YouTube-Version ist gesperrt – MediaHub sucht eine abspielbare Musikvideo-Version …");
       let alternative = null;
@@ -1160,7 +1242,7 @@
         await play(alternative);
         return;
       }
-      forgetBlockedItem(item.id);
+      if (permanent) forgetBlockedItem(item.id);
       if (blockedRecoveries >= MAX_CONSECUTIVE_PLAYBACK_FAILURES) {
         stopAutomaticRecovery("Mehrere Titel sind im YouTube-Player gesperrt. Der automatische Wechsel wurde gestoppt, damit MediaHub nicht endlos Titel überspringt.");
         return;
@@ -1397,6 +1479,7 @@
       const playGeneration = ++transitionGeneration;
       const token = ++playbackToken;
       selected = item;
+      clearStablePlaybackTimer();
       if (item.thumbnail) {
         root.style?.setProperty?.("--mh-artwork", `url(${JSON.stringify(String(item.thumbnail))})`);
         root.classList.add("mh-has-artwork");
@@ -1415,6 +1498,18 @@
       compactAutoMixQueue();
       showError("");
       try {
+        if (shouldResolvePlaybackVersion(item)) {
+          showError("MediaHub bereitet eine abspielbare Musikvideo-Version vor …");
+          let prepared = null;
+          try { prepared = await findPlayableAlternative(item); } catch { /* use the original version below */ }
+          if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
+          if (prepared) {
+            replaceQueueVersion(item, prepared);
+            selected = prepared;
+            item = prepared;
+          }
+          showError("");
+        }
         const activation = await api?.setActiveProvider?.(ID);
         if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         if (activation?.ok === false) throw new Error(activation.error?.message || "MediaHub konnte nicht aktiviert werden.");
@@ -1526,7 +1621,8 @@
             recoverPlaybackFailure(
               eventToken,
               blockedItem,
-              "Diese Version ist gesperrt – MediaHub wechselt zum nächsten Titel …"
+              "Diese Version ist gesperrt – MediaHub wechselt zum nächsten Titel …",
+              { permanent: [2, 100, 101, 150].includes(code) }
             );
           }
         } else if (code === 153) {
@@ -1547,13 +1643,15 @@
           recoverPlaybackFailure(
             eventToken,
             stalledItem,
-            "Dieser Titel lädt nicht weiter – MediaHub wechselt zum nächsten Titel …"
+            "Dieser Titel lädt nicht weiter – MediaHub wechselt zum nächsten Titel …",
+            { permanent: false }
           );
         }
         return;
       }
       if (event.data.type === "ended") {
         clearPlaybackWatchdog();
+        confirmStablePlayback(eventToken, selected?.id);
         if (transitionedToken !== playbackToken) {
           transitionedToken = playbackToken;
           advancePlayback(eventToken);
@@ -1562,10 +1660,11 @@
       }
       if (event.data.type === "state" && selected) {
         if (["playing", "paused", "stopped"].includes(event.data.state)) clearPlaybackWatchdog();
+        if (["paused", "stopped"].includes(event.data.state)) clearStablePlaybackTimer();
         if (event.data.state === "loading") armPlaybackWatchdog(playbackToken, selected.id);
         if (event.data.state === "playing") {
           playerReady = true;
-          blockedRecoveries = 0;
+          armStablePlaybackTimer(playbackToken, selected.id);
           showError("");
           ensureMixBuffer().catch(() => scheduleMixRetry());
         }
@@ -1591,9 +1690,11 @@
         mixRetryAttempt = 0;
         clearMixRetry();
         clearPlaybackWatchdog();
+        clearStablePlaybackTimer();
         transitionedToken = playbackToken;
       } else if (message.command === "pause") {
         clearPlaybackWatchdog();
+        clearStablePlaybackTimer();
       } else if (message.command === "play" && selected?.id) {
         if (stoppedByUser) {
           transitionGeneration += 1;
@@ -1770,6 +1871,7 @@
       mixGeneration += 1;
       clearMixRetry();
       clearPlaybackWatchdog();
+      clearStablePlaybackTimer();
       window.removeEventListener("message", receivePlayerMessage);
       if (typeof unsubscribe === "function") unsubscribe();
       disposeView = null;

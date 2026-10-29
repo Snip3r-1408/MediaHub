@@ -693,3 +693,76 @@ test("an embed-blocked song is replaced with a matching YouTube Music video", as
   assert.deepEqual(loads.map(message => message.videoId), ["song-only", "official-video"]);
   assert.equal(harness.hooks.playlists()[0].items[0].id, "official-video");
 });
+
+test("YouTube Music catalogue audio is resolved before the iframe starts", async () => {
+  const catalogueAudio = {
+    ...song("catalogue-audio", "Falling In Reverse"),
+    title: "Watch The World Burn",
+    channel: "Falling In Reverse",
+    artists: ["Falling In Reverse"],
+    album: "Popular Monster",
+    source: "ytmusicapi",
+    kind: "song",
+    videoType: "MUSIC_VIDEO_TYPE_ATV"
+  };
+  const officialVideo = {
+    ...catalogueAudio,
+    id: "official-video",
+    videoId: "official-video",
+    kind: "video",
+    videoType: "MUSIC_VIDEO_TYPE_OMV"
+  };
+  const harness = await createHarness({
+    storage: {
+      "mediahub-playlists-v1": JSON.stringify([
+        { id: "queue", name: "Queue", items: [catalogueAudio] }
+      ])
+    },
+    ytMusic(route, payload) {
+      if (route === "/v1/search" && payload.filter === "videos") return [officialVideo];
+      return [];
+    }
+  });
+
+  assert.equal(await harness.hooks.play(catalogueAudio), true);
+  const loads = harness.framePosts.filter(message => message.command === "load");
+  assert.deepEqual(loads.map(message => message.videoId), ["official-video"]);
+  assert.equal(harness.hooks.playlists()[0].items[0].id, "official-video");
+});
+
+test("brief playing signals cannot reset the blocked-video safety limit", async () => {
+  const tracks = Array.from({ length: 6 }, (_value, index) => song(`blocked-${index + 1}`, `Artist ${index + 1}`));
+  const harness = await createHarness({
+    storage: {
+      "mediahub-playlists-v1": JSON.stringify([
+        { id: "queue", name: "Queue", items: tracks }
+      ])
+    },
+    ytMusic() { return []; }
+  });
+
+  assert.equal(await harness.hooks.play(tracks[0]), true);
+  for (let index = 0; index < 5; index += 1) {
+    const load = harness.framePosts.filter(message => message.command === "load").at(-1);
+    harness.dispatchMessage(harness.playerFrame().contentWindow, {
+      source: "mediahub-player",
+      type: "state",
+      state: "playing",
+      videoId: load.videoId,
+      token: load.token
+    });
+    harness.dispatchMessage(harness.playerFrame().contentWindow, {
+      source: "mediahub-player",
+      type: "error",
+      code: 150,
+      videoId: load.videoId,
+      token: load.token
+    });
+    await harness.flush(50);
+  }
+
+  const loads = harness.framePosts.filter(message => message.command === "load");
+  assert.deepEqual(loads.map(message => message.videoId), tracks.slice(0, 5).map(track => track.id));
+  const failedCache = JSON.parse(harness.storage.get("mediahub-failed-videos-v1") || "{}");
+  assert.deepEqual(Object.keys(failedCache).sort(), tracks.slice(0, 5).map(track => track.id).sort());
+});

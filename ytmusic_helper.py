@@ -137,6 +137,7 @@ def _entity(item: Any) -> dict[str, Any] | None:
         "album": album_name,
         "thumbnail": _thumbnail(item),
         "durationSeconds": _duration_seconds(item),
+        "videoType": _text(item.get("videoType")),
         "year": _text(item.get("year")),
         "isAvailable": item.get("isAvailable", True) is not False,
         "isExplicit": item.get("isExplicit", False) is True,
@@ -162,6 +163,7 @@ def _normalise(item: Any) -> dict[str, Any] | None:
         "album": album_name,
         "thumbnail": _thumbnail(item),
         "durationSeconds": _duration_seconds(item),
+        "videoType": _text(item.get("videoType")),
         "isAvailable": item.get("isAvailable", True) is not False,
         "source": "ytmusicapi",
     }
@@ -223,7 +225,7 @@ class Adapter:
             params={"query": f'artist:"{artist}"', "fmt": "json", "limit": 5},
             headers={
                 "Accept": "application/json",
-                "User-Agent": "MediaHub/0.13.5 (https://github.com/Snip3r-1408/MediaHub)",
+                "User-Agent": "MediaHub/0.13.6 (https://github.com/Snip3r-1408/MediaHub)",
             },
             timeout=8,
         )
