@@ -4,12 +4,21 @@ Diese Roadmap beschreibt die geplante Richtung von MediaHub. Reihenfolge und
 Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 ändern.
 
-## Als Nächstes
+## Als Nächstes: MediaHub 0.14 Provider Platform
 
-- Nicht einbettbare Videos bereits vor der Wiedergabe herausfiltern
-- Künstler- und Genre-Erkennung für mehr Sonderfälle weiter verfeinern
-- Laufzeitdaten direkt aus der Suche auswerten, sobald WebRadio sie bereitstellt
-- Mixer-Qualität mit längeren Praxistests weiter abstimmen
+- Sichere, isolierte Web-Sitzung mit WebRadio abstimmen und implementieren
+- YouTube Music Premium über die echte `music.youtube.com`-Sitzung abspielen
+- Katalog, Anmeldung und Wiedergabe hinter Provider-Adaptern trennen
+- Warteschlangeneinträge um `providerId` und `providerTrackId` erweitern
+- Anbieter-Umschalter für YouTube Music, Spotify, Apple Music und Amazon Music
+  vorbereiten
+- Den bisherigen YouTube-IFrame nach erfolgreicher Migration entfernen
+
+Die technische Zielarchitektur steht in
+[`docs/PROVIDER_ARCHITECTURE.md`](docs/PROVIDER_ARCHITECTURE.md). Die dafür im
+WebRadio-Core benötigte Schnittstelle ist in
+[`docs/WEBRADIO_WEB_SESSION_API.md`](docs/WEBRADIO_WEB_SESSION_API.md)
+vollständig beschrieben.
 
 ## Plugin-Updates
 
@@ -48,7 +57,9 @@ Umfang können sich durch Änderungen am WebRadio Plugin SDK oder an YouTube
 
 ## Langfristig
 
-- Generische Provider-Schicht für weitere legale Musikquellen
+- Spotify über Web API und Web Playback SDK ergänzen
+- Apple Music über Apple Music API und MusicKit on the Web ergänzen
+- Amazon Music nach gesonderter technischer und vertraglicher Prüfung ergänzen
 - Plugin-eigene OAuth-Logik über allgemeine sichere WebRadio-Schnittstellen
 - Weitere automatisierte Tests für Playlist-Verwaltung und Langzeit-Mix
 - Automatisierte, reproduzierbare Release-Pakete über GitHub Actions

@@ -118,6 +118,12 @@ bisherigen WebRadio-Suche weiter.
 Die aktuelle Planung findest du in der [Roadmap](ROADMAP.md). Änderungen jeder
 Version werden im [Changelog](CHANGELOG.md) dokumentiert.
 
+Die laufende 0.14-Neuentwicklung trennt MediaHub in austauschbare Musikdienste.
+Details stehen in der
+[Provider-Architektur](docs/PROVIDER_ARCHITECTURE.md); die dafür benötigte
+[WebRadio Web Session API](docs/WEBRADIO_WEB_SESSION_API.md) ist separat und
+anbieterneutral spezifiziert.
+
 - [Fehler melden](https://github.com/Snip3r-1408/MediaHub/issues)
 - [Neueste Version herunterladen](https://github.com/Snip3r-1408/MediaHub/releases/latest)
 - [Zu WebRadio](https://github.com/YourEliteSystems/WebRadio)

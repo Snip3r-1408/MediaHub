@@ -2,6 +2,21 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## Unveröffentlicht – MediaHub 0.14
+
+### Provider Platform begonnen
+
+- Gemeinsame Provider-Registry für YouTube Music, Spotify, Apple Music und
+  Amazon Music angelegt
+- Providerstatus, Anmeldung, Katalog- und Wiedergabeadapter sowie benötigte
+  Core-Capabilities werden maschinenlesbar beschrieben und validiert
+- Dienstneutrale Zielarchitektur für den späteren Anbieter-Umschalter
+  dokumentiert
+- Sichere WebRadio-Web-Session-Schnittstelle mit Origin-Beschränkung,
+  getrennten Sitzungen und bereinigten Medienzuständen spezifiziert
+- Die aktuelle Wiedergabe bleibt bis zur benötigten WebRadio-Core-Erweiterung
+  unverändert
+
 ## 0.13.9 – 2026-10-29
 
 ### Keine endlose Suche durch gesperrte Titel

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "defaultProvider": "youtube-music",
+  "providers": [
+    {
+      "id": "youtube-music",
+      "name": "YouTube Music",
+      "shortName": "YouTube",
+      "phase": "migration",
+      "catalogAdapter": "ytmusicapi",
+      "playbackAdapter": "youtube-iframe",
+      "targetPlaybackAdapter": "web-session",
+      "auth": "google-web-session",
+      "origin": "https://music.youtube.com",
+      "requiresSubscription": false,
+      "targetCoreCapabilities": ["web-session", "web-session-media"]
+    },
+    {
+      "id": "spotify",
+      "name": "Spotify",
+      "shortName": "Spotify",
+      "phase": "planned",
+      "catalogAdapter": "spotify-web-api",
+      "playbackAdapter": "spotify-web-playback-sdk",
+      "auth": "spotify-oauth",
+      "origin": "https://open.spotify.com",
+      "requiresSubscription": true,
+      "targetCoreCapabilities": ["provider-oauth", "encrypted-media"]
+    },
+    {
+      "id": "apple-music",
+      "name": "Apple Music",
+      "shortName": "Apple",
+      "phase": "planned",
+      "catalogAdapter": "apple-music-api",
+      "playbackAdapter": "musickit-web",
+      "auth": "apple-music-user-token",
+      "origin": "https://music.apple.com",
+      "requiresSubscription": true,
+      "targetCoreCapabilities": ["provider-oauth", "encrypted-media"]
+    },
+    {
+      "id": "amazon-music",
+      "name": "Amazon Music",
+      "shortName": "Amazon",
+      "phase": "planned",
+      "catalogAdapter": "amazon-web-session",
+      "playbackAdapter": "web-session",
+      "auth": "amazon-web-session",
+      "origin": "https://music.amazon.com",
+      "requiresSubscription": true,
+      "targetCoreCapabilities": ["web-session", "web-session-media", "encrypted-media"]
+    }
+  ]
+}
