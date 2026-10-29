@@ -270,6 +270,18 @@
       );
     } catch { failedVideoCache = {}; }
     const failedVideoIds = new Set(Object.keys(failedVideoCache));
+    let removedUnavailableItems = false;
+    playlists.forEach(list => {
+      const availableItems = list.items.filter(item => item?.id
+        && item.isAvailable !== false
+        && !item.mediaHubUnavailable
+        && !failedVideoIds.has(item.id));
+      if (availableItems.length !== list.items.length) {
+        list.items = availableItems;
+        removedUnavailableItems = true;
+      }
+    });
+    if (removedUnavailableItems) localStorage.setItem(STORE_KEY, JSON.stringify(playlists));
     const alternateAttempts = new Map();
     const playedVideoIds = new Set();
     let mixRound = 0;
@@ -729,11 +741,16 @@
 
     function forgetBlockedItem(videoId) {
       if (!videoId) return;
-      const list = activePlaylist();
-      const blocked = list.items.find(item => item.id === videoId);
-      if (blocked) blocked.mediaHubUnavailable = true;
+      let removed = false;
+      playlists.forEach(list => {
+        const kept = list.items.filter(item => item.id !== videoId);
+        if (kept.length !== list.items.length) {
+          list.items = kept;
+          removed = true;
+        }
+      });
       currentResults = currentResults.filter(item => item.id !== videoId);
-      save();
+      if (removed) save();
       renderResults(currentResults);
       renderQueue();
     }

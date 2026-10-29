@@ -2,6 +2,16 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.8 – 2026-10-29
+
+### Saubere Warteschlange
+
+- Dauerhaft gesperrte oder von YouTube als nicht verfügbar gemeldete Titel
+  werden vollständig aus allen lokalen Warteschlangen entfernt
+- Beim Start bereinigt MediaHub außerdem defekte Einträge, die von älteren
+  Versionen nur als nicht verfügbar markiert wurden
+- Vorübergehende Netzwerk- oder Ladeprobleme löschen keine gespeicherten Titel
+
 ## 0.13.7 – 2026-10-29
 
 ### Eine gemeinsame Warteschlange

@@ -668,6 +668,11 @@ test("automatic advance skips a persisted unavailable item", async () => {
     harness.framePosts.filter(message => message.command === "load").map(message => message.videoId),
     ["track-a", "track-c"]
   );
+  assert.deepEqual(
+    Array.from(harness.hooks.playlists()[0].items, item => item.id),
+    ["track-a", "track-c"],
+    "entries marked unavailable by older versions must be removed at startup"
+  );
 });
 
 test("an embed-blocked song is replaced with a matching YouTube Music video", async () => {
@@ -778,4 +783,9 @@ test("brief playing signals cannot reset the blocked-video safety limit", async 
   assert.deepEqual(loads.map(message => message.videoId), tracks.slice(0, 5).map(track => track.id));
   const failedCache = JSON.parse(harness.storage.get("mediahub-failed-videos-v1") || "{}");
   assert.deepEqual(Object.keys(failedCache).sort(), tracks.slice(0, 5).map(track => track.id).sort());
+  assert.deepEqual(
+    Array.from(harness.hooks.playlists()[0].items, item => item.id),
+    ["blocked-6"],
+    "permanently blocked tracks must disappear from the visible queue"
+  );
 });
