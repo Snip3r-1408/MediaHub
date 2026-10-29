@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.9 – 2026-10-29
+
+### Keine endlose Suche durch gesperrte Titel
+
+- Ist bereits die passend aufgelöste Musikvideo-Version gesperrt, stoppt
+  MediaHub sofort, statt weitere Titel der Warteschlange durchzuschalten
+- Bei gewöhnlichen Wiedergabefehlern greift die Sicherung spätestens nach drei
+  Titeln und beendet auch den eingebetteten Player zuverlässig
+- Pro Titel wird nur noch eine Ersatzversion gesucht; die Suche ist auf vier
+  Sekunden begrenzt
+- Gesperrte Versionen werden weiterhin dauerhaft aus den lokalen
+  Warteschlangen entfernt
+
 ## 0.13.8 – 2026-10-29
 
 ### Saubere Warteschlange

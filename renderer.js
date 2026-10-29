@@ -17,8 +17,9 @@
   const YTMUSIC_RETRY_AFTER = 10000;
   const MIX_MAX_QUERIES_PER_REFILL = 4;
   const MIX_HISTORY_KEEP = 6;
-  const MAX_CONSECUTIVE_PLAYBACK_FAILURES = 5;
-  const MAX_ALTERNATE_ATTEMPTS = 2;
+  const MAX_CONSECUTIVE_PLAYBACK_FAILURES = 3;
+  const MAX_ALTERNATE_ATTEMPTS = 1;
+  const PLAYBACK_ALTERNATIVE_TIMEOUT = 4000;
   const PLAYBACK_STABLE_MS = 12000;
   const FAILED_VIDEO_TTL = 30 * 24 * 60 * 60 * 1000;
   const MAX_FAILED_VIDEO_CACHE = 500;
@@ -1208,6 +1209,22 @@
         }))[0] || null;
     }
 
+    function findPlayableAlternativeQuickly(item) {
+      return new Promise(resolve => {
+        let settled = false;
+        const finish = value => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          resolve(value || null);
+        };
+        const timer = window.setTimeout(() => finish(null), PLAYBACK_ALTERNATIVE_TIMEOUT);
+        Promise.resolve()
+          .then(() => findPlayableAlternative(item))
+          .then(finish, () => finish(null));
+      });
+    }
+
     function shouldResolvePlaybackVersion(item) {
       if (!item?.id || item.mediaHubPlaybackVersion || item.mediaHubAlternateOf) return false;
       const videoType = String(item.videoType || "").toUpperCase();
@@ -1229,9 +1246,16 @@
     function stopAutomaticRecovery(message) {
       autoMix = false;
       localStorage.setItem(AUTO_MIX_KEY, "false");
+      stoppedByUser = true;
+      transitionGeneration += 1;
+      advanceQueuedToken = 0;
+      transitionedToken = playbackToken;
       mixResumePending = null;
       mixGeneration += 1;
       clearMixRetry();
+      clearPlaybackWatchdog();
+      clearStablePlaybackTimer();
+      post({ command: "stop" });
       renderAutoMix();
       showError(message);
       api?.reportProviderState?.(ID, { state: "stopped" });
@@ -1243,9 +1267,20 @@
       if (permanent) rememberFailedVideo(item.id);
       else failedVideoIds.add(item.id);
       blockedRecoveries += 1;
+
+      if (item.mediaHubAlternateOf) {
+        if (permanent) forgetBlockedItem(item.id);
+        stopAutomaticRecovery("Auch die passende Musikvideo-Version ist in diesem YouTube-Player gesperrt. MediaHub hat die automatische Suche gestoppt, statt weitere Titel durchzuschalten.");
+        return;
+      }
+      if (blockedRecoveries >= MAX_CONSECUTIVE_PLAYBACK_FAILURES) {
+        if (permanent) forgetBlockedItem(item.id);
+        stopAutomaticRecovery("Mehrere Titel sind im YouTube-Player gesperrt. MediaHub hat die automatische Suche gestoppt, statt die Warteschlange weiter zu durchsuchen.");
+        return;
+      }
+
       showError("Diese YouTube-Version ist gesperrt – MediaHub sucht eine abspielbare Musikvideo-Version …");
-      let alternative = null;
-      try { alternative = await findPlayableAlternative(item); } catch { /* continue safely below */ }
+      const alternative = await findPlayableAlternativeQuickly(item);
       if (expectedToken !== playbackToken || selected?.id !== item.id || disposed) return;
       if (alternative) {
         replaceQueueVersion(item, alternative);
@@ -1254,10 +1289,6 @@
         return;
       }
       if (permanent) forgetBlockedItem(item.id);
-      if (blockedRecoveries >= MAX_CONSECUTIVE_PLAYBACK_FAILURES) {
-        stopAutomaticRecovery("Mehrere Titel sind im YouTube-Player gesperrt. Der automatische Wechsel wurde gestoppt, damit MediaHub nicht endlos Titel überspringt.");
-        return;
-      }
       showError(message);
       advancePlayback(expectedToken);
     }
@@ -1512,7 +1543,7 @@
         if (shouldResolvePlaybackVersion(item)) {
           showError("MediaHub bereitet eine abspielbare Musikvideo-Version vor …");
           let prepared = null;
-          try { prepared = await findPlayableAlternative(item); } catch { /* use the original version below */ }
+          prepared = await findPlayableAlternativeQuickly(item);
           if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
           if (prepared) {
             replaceQueueVersion(item, prepared);

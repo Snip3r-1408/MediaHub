@@ -749,7 +749,7 @@ test("YouTube Music catalogue audio is resolved before the iframe starts", async
 });
 
 test("brief playing signals cannot reset the blocked-video safety limit", async () => {
-  const tracks = Array.from({ length: 6 }, (_value, index) => song(`blocked-${index + 1}`, `Artist ${index + 1}`));
+  const tracks = Array.from({ length: 4 }, (_value, index) => song(`blocked-${index + 1}`, `Artist ${index + 1}`));
   const harness = await createHarness({
     storage: {
       "mediahub-playlists-v1": JSON.stringify([
@@ -760,7 +760,7 @@ test("brief playing signals cannot reset the blocked-video safety limit", async 
   });
 
   assert.equal(await harness.hooks.play(tracks[0]), true);
-  for (let index = 0; index < 5; index += 1) {
+  for (let index = 0; index < 3; index += 1) {
     const load = harness.framePosts.filter(message => message.command === "load").at(-1);
     harness.dispatchMessage(harness.playerFrame().contentWindow, {
       source: "mediahub-player",
@@ -780,12 +780,67 @@ test("brief playing signals cannot reset the blocked-video safety limit", async 
   }
 
   const loads = harness.framePosts.filter(message => message.command === "load");
-  assert.deepEqual(loads.map(message => message.videoId), tracks.slice(0, 5).map(track => track.id));
+  assert.deepEqual(loads.map(message => message.videoId), tracks.slice(0, 3).map(track => track.id));
+  assert.ok(harness.framePosts.some(message => message.command === "stop"), "the player must be stopped when the safety circuit opens");
   const failedCache = JSON.parse(harness.storage.get("mediahub-failed-videos-v1") || "{}");
-  assert.deepEqual(Object.keys(failedCache).sort(), tracks.slice(0, 5).map(track => track.id).sort());
+  assert.deepEqual(Object.keys(failedCache).sort(), tracks.slice(0, 3).map(track => track.id).sort());
   assert.deepEqual(
     Array.from(harness.hooks.playlists()[0].items, item => item.id),
-    ["blocked-6"],
+    ["blocked-4"],
     "permanently blocked tracks must disappear from the visible queue"
   );
+});
+
+test("a blocked prepared music-video version stops instead of scanning the queue", async () => {
+  const catalogueAudio = {
+    ...song("catalogue-audio", "Falling In Reverse"),
+    title: "Watch The World Burn",
+    channel: "Falling In Reverse",
+    artists: ["Falling In Reverse"],
+    album: "Popular Monster",
+    source: "ytmusicapi",
+    kind: "song",
+    videoType: "MUSIC_VIDEO_TYPE_ATV"
+  };
+  const preparedVideo = {
+    ...catalogueAudio,
+    id: "prepared-video",
+    videoId: "prepared-video",
+    kind: "video",
+    videoType: "MUSIC_VIDEO_TYPE_OMV"
+  };
+  const next = song("next-track", "Another Artist");
+  const harness = await createHarness({
+    storage: {
+      "mediahub-auto-mix-v1": "true",
+      "mediahub-playlists-v1": JSON.stringify([
+        { id: "queue", name: "Queue", items: [catalogueAudio, next] }
+      ])
+    },
+    ytMusic(route, payload) {
+      if (route === "/v1/search" && payload.filter === "videos") return [preparedVideo];
+      return [];
+    }
+  });
+
+  assert.equal(await harness.hooks.play(catalogueAudio), true);
+  const load = harness.framePosts.find(message => message.command === "load");
+  assert.equal(load.videoId, "prepared-video");
+  harness.dispatchMessage(harness.playerFrame().contentWindow, {
+    source: "mediahub-player",
+    type: "error",
+    code: 150,
+    videoId: load.videoId,
+    token: load.token
+  });
+  await harness.flush(60);
+
+  assert.deepEqual(
+    harness.framePosts.filter(message => message.command === "load").map(message => message.videoId),
+    ["prepared-video"],
+    "a failed prepared version must not trigger a scan through following queue items"
+  );
+  assert.ok(harness.framePosts.some(message => message.command === "stop"));
+  assert.equal(harness.storage.get("mediahub-auto-mix-v1"), "false");
+  assert.deepEqual(Array.from(harness.hooks.playlists()[0].items, item => item.id), ["next-track"]);
 });
