@@ -925,6 +925,20 @@
       return accepted;
     }
 
+    function filterRadioGenre(items, profile, limit) {
+      if (!limit) return [];
+      const accepted = [];
+      for (const item of items || []) {
+        if (!item?.id || isLongForm(item)) continue;
+        const evidence = genreFamilies(localGenreTags(item));
+        if (profile?.families?.size && evidence.size
+          && ![...evidence].some(family => profile.families.has(family))) continue;
+        accepted.push(item);
+        if (accepted.length >= limit) break;
+      }
+      return accepted;
+    }
+
     async function mixQueries(item, fallback = "", offset = mixRound) {
       const artist = seedArtist(item, fallback);
       let tags = [];
@@ -1035,9 +1049,7 @@
 
     async function fillGenreMix(seed, firstResults = []) {
       const seedItem = firstResults[0] || mixAnchor || selected;
-      const candidates = mixStyle === "genre"
-        ? await filterStrictGenre(firstResults, await strictGenreProfile(seedItem, seed), 4)
-        : firstResults;
+      const candidates = mixStyle === "genre" ? [] : firstResults;
       const additions = mergeIntoPlaylist(candidates, 4, 2);
       if (!seed || additions.length >= MIX_BUFFER_TARGET) return additions;
       additions.push(...await ensureMixBuffer({ force: true, seedItem }));
@@ -1155,17 +1167,17 @@
           scheduleMixRetry();
           return [];
         }
-        const radioWanted = mixStyle === "genre" ? Math.min(wanted, 4) : wanted;
+        const radioWanted = wanted;
         mixRound = (mixRound + 1) % 100000;
         try {
           const radioTracks = await ytMusicRadio(radioSeed?.id, Math.max(25, wanted * 2));
           if (refillGeneration !== mixGeneration || targetPlaylistId !== playlistId) return [];
           if (radioTracks?.length) {
             const candidates = mixStyle === "genre"
-              ? await filterStrictGenre(radioTracks, genreProfile, radioWanted)
+              ? filterRadioGenre(radioTracks, genreProfile, radioWanted)
               : radioTracks;
             additions.push(...mergeIntoPlaylist(candidates, radioWanted, 2, targetPlaylist));
-            if (additions.length) mixSource = mixStyle === "genre" ? "Fester Genre-Mix" : "YouTube Music Radio";
+            if (additions.length) mixSource = "YouTube Music Radio";
           }
         } catch { /* use the classic genre search below */ }
         if (additions.length >= wanted) return additions;
@@ -1566,11 +1578,14 @@
         const found = await searchSongs(query);
         mixAnchor = found[0] || null;
         renderResults(found);
-        if (autoMix) {
-          const additions = await fillGenreMix(query, found);
-          if (!selected && (additions[0] || found[0])) play(additions[0] || found[0]);
-        }
         setTab("results", "discover");
+        if (autoMix) {
+          if (!selected && found[0]) play(found[0]);
+          fillGenreMix(query, found).catch(err => {
+            showError(err.message || "Der Magische Mixer konnte nicht geladen werden.");
+            scheduleMixRetry();
+          });
+        }
       } catch (err) {
         showError(err.message || "Die Suche ist fehlgeschlagen.");
       } finally {

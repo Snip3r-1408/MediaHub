@@ -537,7 +537,7 @@ test("the endless mixer prefers YouTube Music radio and keeps the classic search
   assert.equal(harness.hooks.playlists()[0].items.length, 12);
 });
 
-test("same-genre mode keeps a fixed manual seed and limits radio drift", async () => {
+test("same-genre mode keeps a fixed seed and fills the queue from YouTube Music radio", async () => {
   const metalSeed = {
     ...song("metal-seed", "Falling In Reverse"),
     title: "Joseph",
@@ -580,9 +580,9 @@ test("same-genre mode keeps a fixed manual seed and limits radio drift", async (
   const additions = await harness.hooks.ensureMixBuffer({ force: true });
   const radioCall = harness.framePosts.find(call => call.source === "mediahub-ytmusic-parent" && call.route === "/v1/radio");
   assert.equal(radioCall.payload.videoId, "metal-seed", "the last auto-added title must not become the genre anchor");
-  assert.ok(additions.filter(item => item.id.startsWith("radio-")).length <= 4, "free radio suggestions are capped in same-genre mode");
+  assert.equal(additions.length, 11, "YouTube Music radio should fill the complete upcoming buffer");
+  assert.equal(harness.searchCalls.length, 0, "genre search is only a fallback when the radio cannot fill the queue");
   assert.equal(additions.some(item => item.id === "wrong-genre"), false, "a hip-hop candidate must not enter a metal mix");
-  assert.ok(harness.searchCalls.some(query => query.toLowerCase().includes("metalcore")));
 });
 
 test("an activation infrastructure failure does not mark the title unavailable", async () => {

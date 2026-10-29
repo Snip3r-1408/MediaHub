@@ -2,6 +2,19 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.4 – 2026-10-29
+
+### Mixer und Suche
+
+- „Gleiches Genre“ füllt „Als Nächstes“ nun vollständig aus dem echten
+  YouTube-Music-Radio statt nur vier Radiotitel zu übernehmen
+- MusicBrainz prüft nur noch das feste Startgenre und wird bei fehlendem
+  YouTube-Music-Radio für die Rückfallsuche verwendet
+- Kandidaten aus dem Radio werden nicht mehr einzeln über das Netzwerk geprüft;
+  dadurch wird die Warteschlange wesentlich schneller aufgebaut
+- Suchtreffer erscheinen sofort, während der Magische Mixer die nächsten Titel
+  anschließend im Hintergrund lädt
+
 ## 0.13.3 – 2026-10-29
 
 ### Behoben
