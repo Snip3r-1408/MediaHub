@@ -176,7 +176,10 @@ function instrumentedRenderer() {
         libraryNav,
         catalogueView,
         resultsView,
-        playlistOverview
+        playlistOverview,
+        playlistView,
+        queue,
+        content
       },
       get frame() { return frame; },
       get playbackToken() { return playbackToken; },
@@ -390,6 +393,16 @@ test("catalogue navigation loads YouTube Music home and explore without rebuildi
   harness.hooks.nodes.libraryNav.dispatchEvent({ type: "click" });
   assert.equal(harness.hooks.nodes.catalogueView.classList.contains("mh-hidden"), true);
   assert.equal(harness.hooks.nodes.playlistOverview.classList.contains("mh-hidden"), false);
+  assert.equal(
+    harness.hooks.nodes.playlistView.parentNode,
+    harness.hooks.nodes.playlistOverview,
+    "the single playback queue must live below the player in the library area"
+  );
+  assert.equal(
+    harness.hooks.nodes.content.children.includes(harness.hooks.nodes.playlistView),
+    false,
+    "the old right-hand queue column must no longer exist"
+  );
   assert.ok(harness.playerFrame(), "switching views must preserve the existing player iframe");
 });
 

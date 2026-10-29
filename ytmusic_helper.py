@@ -225,7 +225,7 @@ class Adapter:
             params={"query": f'artist:"{artist}"', "fmt": "json", "limit": 5},
             headers={
                 "Accept": "application/json",
-                "User-Agent": "MediaHub/0.13.6 (https://github.com/Snip3r-1408/MediaHub)",
+                "User-Agent": "MediaHub/0.13.7 (https://github.com/Snip3r-1408/MediaHub)",
             },
             timeout=8,
         )

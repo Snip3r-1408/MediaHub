@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.7 – 2026-10-29
+
+### Eine gemeinsame Warteschlange
+
+- Die bisherige rechte Spalte „Als Nächstes“ wurde entfernt
+- Dieselbe echte Wiedergabewarteschlange erscheint nun vollständig unter dem
+  Player im Bereich „Mediathek“
+- Mixer, Wiedergabemodus, Playlist-Auswahl und Verwaltung befinden sich direkt
+  über der gemeinsamen Warteschlange
+- Player und Inhaltsbereich nutzen dadurch die gesamte verfügbare Breite
+
 ## 0.13.6 – 2026-10-29
 
 ### Normale Wiedergabe stabilisiert
