@@ -2,6 +2,20 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.5 – 2026-10-29
+
+### Wiedergabe-Reparatur
+
+- Bei einer gesperrten YouTube-Music-Song-ID sucht MediaHub nun zuerst eine
+  passende Musikvideo-Version desselben Titels und ersetzt die defekte Version
+  direkt in der Warteschlange
+- Alternative Versionen werden nach Titel und Künstler sortiert; lange Videos,
+  bereits fehlgeschlagene IDs und unpassende Titel werden verworfen
+- Nach fünf aufeinanderfolgenden Player-Fehlern wird der Auto-Mix kontrolliert
+  gestoppt, statt immer neue Titel nachzufüllen und endlos zu überspringen
+- Auch festhängende Titel und der Wiedergabe-Watchdog verwenden dieselbe
+  begrenzte Wiederherstellung
+
 ## 0.13.4 – 2026-10-29
 
 ### Mixer und Suche

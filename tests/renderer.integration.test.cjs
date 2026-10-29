@@ -656,3 +656,40 @@ test("automatic advance skips a persisted unavailable item", async () => {
     ["track-a", "track-c"]
   );
 });
+
+test("an embed-blocked song is replaced with a matching YouTube Music video", async () => {
+  const blocked = song("song-only", "Falling In Reverse");
+  blocked.title = "Watch The World Burn";
+  const alternative = {
+    ...blocked,
+    id: "official-video",
+    videoId: "official-video",
+    kind: "video"
+  };
+  const harness = await createHarness({
+    storage: {
+      "mediahub-playlists-v1": JSON.stringify([
+        { id: "queue", name: "Queue", items: [blocked] }
+      ])
+    },
+    ytMusic(route, payload) {
+      if (route === "/v1/search" && payload.filter === "videos") return [alternative];
+      return [];
+    }
+  });
+
+  assert.equal(await harness.hooks.play(blocked), true);
+  const firstLoad = harness.framePosts.find(message => message.command === "load");
+  harness.dispatchMessage(harness.playerFrame().contentWindow, {
+    source: "mediahub-player",
+    type: "error",
+    code: 150,
+    videoId: blocked.id,
+    token: firstLoad.token
+  });
+  await harness.flush(40);
+
+  const loads = harness.framePosts.filter(message => message.command === "load");
+  assert.deepEqual(loads.map(message => message.videoId), ["song-only", "official-video"]);
+  assert.equal(harness.hooks.playlists()[0].items[0].id, "official-video");
+});

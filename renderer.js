@@ -16,6 +16,8 @@
   const YTMUSIC_RETRY_AFTER = 10000;
   const MIX_MAX_QUERIES_PER_REFILL = 4;
   const MIX_HISTORY_KEEP = 6;
+  const MAX_CONSECUTIVE_PLAYBACK_FAILURES = 5;
+  const MAX_ALTERNATE_ATTEMPTS = 2;
   let disposeView = null;
   let ytMusicClientPromise = null;
   let ytMusicClientFrame = null;
@@ -161,8 +163,8 @@
     pending.resolve(event.data.ok ? (event.data.result ?? null) : null);
   });
 
-  function ytMusicSearch(query, limit = 20) {
-    return ytMusicRequest("/v1/search", { query, limit });
+  function ytMusicSearch(query, limit = 20, filter = "songs") {
+    return ytMusicRequest("/v1/search", { query, limit, filter });
   }
 
   function ytMusicRadio(videoId, limit = 30) {
@@ -254,6 +256,7 @@
     let mixStyle = localStorage.getItem(MIX_STYLE_KEY) || "genre";
     let lastSearchQuery = "";
     const failedVideoIds = new Set();
+    const alternateAttempts = new Map();
     const playedVideoIds = new Set();
     let mixRound = 0;
     let advancing = false;
@@ -1089,6 +1092,83 @@
       return auth.search(query);
     }
 
+    function alternativeKey(item) {
+      return `${artistIdentity(seedArtist(item))}|${songKey(item)}`;
+    }
+
+    async function findPlayableAlternative(item) {
+      const key = alternativeKey(item);
+      const attempts = alternateAttempts.get(key) || 0;
+      if (!key || attempts >= MAX_ALTERNATE_ATTEMPTS) return null;
+      alternateAttempts.set(key, attempts + 1);
+      const artist = seedArtist(item);
+      const title = decode(item?.title || "");
+      const targetTitle = songKey({ title });
+      const candidates = await ytMusicSearch(`${artist} ${title} official music video`, 12, "videos");
+      return (candidates || [])
+        .filter(candidate => {
+          const videoId = candidate?.videoId || candidate?.id;
+          if (!videoId || videoId === item.id || failedVideoIds.has(videoId) || isLongForm(candidate)) return false;
+          const candidateTitle = songKey(candidate);
+          return !targetTitle || candidateTitle.includes(targetTitle);
+        })
+        .sort((left, right) => {
+          const leftArtist = artistIdentity(seedArtist(left)) === artistIdentity(artist) ? 1 : 0;
+          const rightArtist = artistIdentity(seedArtist(right)) === artistIdentity(artist) ? 1 : 0;
+          return rightArtist - leftArtist;
+        })
+        .map(candidate => ({
+          ...item,
+          ...candidate,
+          id: candidate.videoId || candidate.id,
+          mediaHubAlternateOf: item.mediaHubAlternateOf || item.id
+        }))[0] || null;
+    }
+
+    function replaceQueueVersion(original, replacement) {
+      const list = activePlaylist();
+      const index = list.items.findIndex(item => item.id === original.id);
+      if (index >= 0) {
+        list.items[index] = replacement;
+        save();
+        renderQueue();
+      }
+    }
+
+    function stopAutomaticRecovery(message) {
+      autoMix = false;
+      localStorage.setItem(AUTO_MIX_KEY, "false");
+      mixResumePending = null;
+      mixGeneration += 1;
+      clearMixRetry();
+      renderAutoMix();
+      showError(message);
+      api?.reportProviderState?.(ID, { state: "stopped" });
+    }
+
+    async function recoverPlaybackFailure(expectedToken, item, message) {
+      if (!item?.id || expectedToken !== playbackToken || selected?.id !== item.id || disposed) return;
+      failedVideoIds.add(item.id);
+      blockedRecoveries += 1;
+      showError("Diese YouTube-Version ist gesperrt – MediaHub sucht eine abspielbare Musikvideo-Version …");
+      let alternative = null;
+      try { alternative = await findPlayableAlternative(item); } catch { /* continue safely below */ }
+      if (expectedToken !== playbackToken || selected?.id !== item.id || disposed) return;
+      if (alternative) {
+        replaceQueueVersion(item, alternative);
+        showError("Alternative Musikvideo-Version gefunden – Wiedergabe wird erneut gestartet …");
+        await play(alternative);
+        return;
+      }
+      forgetBlockedItem(item.id);
+      if (blockedRecoveries >= MAX_CONSECUTIVE_PLAYBACK_FAILURES) {
+        stopAutomaticRecovery("Mehrere Titel sind im YouTube-Player gesperrt. Der automatische Wechsel wurde gestoppt, damit MediaHub nicht endlos Titel überspringt.");
+        return;
+      }
+      showError(message);
+      advancePlayback(expectedToken);
+    }
+
     function searchWithTimeout(query) {
       return new Promise((resolve, reject) => {
         const timer = window.setTimeout(() => reject(new Error("YouTube-Suche hat zu lange gebraucht.")), MIX_SEARCH_TIMEOUT);
@@ -1264,10 +1344,8 @@
           api?.reportProviderState?.(ID, { state: "stopped" });
           return;
         }
-        failedVideoIds.add(videoId);
-        showError("Dieser Titel startet nicht – MediaHub wechselt automatisch …");
         transitionedToken = token;
-        advancePlayback(token);
+        recoverPlaybackFailure(token, { ...selected }, "Dieser Titel startet nicht – MediaHub wechselt zur nächsten Version …");
       }, 25000);
     }
 
@@ -1442,26 +1520,14 @@
         clearPlaybackWatchdog();
         const code = Number(event.data.code);
         if ([2, 5, 100, 101, 150].includes(code)) {
-          const blockedId = selected?.id;
-          if (blockedId) {
-            failedVideoIds.add(blockedId);
-            forgetBlockedItem(blockedId);
-          }
-          blockedRecoveries += 1;
-          const canContinue = autoMix || playableQueue().length || currentResults.length;
-          showError(canContinue
-            ? "Diese Version ist gesperrt – MediaHub sucht automatisch die nächste passende Version …"
-            : "Mehrere YouTube-Versionen sind für externe Player gesperrt. Bitte starte eine neue Suche.");
-          if (canContinue && blockedRecoveries >= 8 && autoMix) {
-            mixRound += MIX_MAX_QUERIES_PER_REFILL;
-            mixResumePending = { token: playbackToken, videoId: selected?.id, playlistId };
+          if (transitionedToken !== playbackToken) {
+            const blockedItem = { ...selected };
             transitionedToken = playbackToken;
-            blockedRecoveries = 0;
-            showError("Viele Versionen sind gesperrt – MediaHub wechselt die Suche und versucht es gleich erneut …");
-            scheduleMixRetry();
-          } else if (canContinue && transitionedToken !== playbackToken) {
-            transitionedToken = playbackToken;
-            advancePlayback(eventToken);
+            recoverPlaybackFailure(
+              eventToken,
+              blockedItem,
+              "Diese Version ist gesperrt – MediaHub wechselt zum nächsten Titel …"
+            );
           }
         } else if (code === 153) {
           showError("YouTube-Player-Fehler 153: WebRadio übermittelt keine gültige Player-Identität.");
@@ -1475,14 +1541,14 @@
       }
       if (event.data.type === "stalled") {
         clearPlaybackWatchdog();
-        if (selected?.id) {
-          failedVideoIds.add(selected.id);
-          forgetBlockedItem(selected.id);
-        }
-        showError("Dieser Titel lädt nicht weiter – MediaHub wechselt automatisch …");
         if (transitionedToken !== playbackToken) {
+          const stalledItem = { ...selected };
           transitionedToken = playbackToken;
-          advancePlayback(eventToken);
+          recoverPlaybackFailure(
+            eventToken,
+            stalledItem,
+            "Dieser Titel lädt nicht weiter – MediaHub wechselt zum nächsten Titel …"
+          );
         }
         return;
       }
