@@ -750,7 +750,7 @@
 
     function cleanArtist(value) {
       return decode(value || "")
-        .replace(/\s*[-–—]\s*(topic|vevo|official)$/i, "")
+        .replace(/\s*[-–—]\s*(topic|thema|tema|sujet|t[oó]pico|official(?: artist)?(?: channel)?)$/i, "")
         .replace(/\s+(official|vevo)$/i, "")
         .replace(/^[\s"'“”]+|[\s"'“”]+$/g, "")
         .trim();
@@ -765,6 +765,8 @@
     }
 
     function seedArtist(item, fallback = "") {
+      const structuredArtist = cleanArtist(item?.artists?.[0]?.name || item?.artists?.[0]);
+      if (structuredArtist) return structuredArtist;
       const title = decode(item?.title || "").replace(/&quot;/gi, '"');
       const titleArtist = title.split(/\s+(?:-|–|—|\|)\s+/)[0];
       if (titleArtist && titleArtist.length <= 70 && titleArtist !== title) return cleanArtist(titleArtist);

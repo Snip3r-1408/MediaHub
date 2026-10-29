@@ -538,7 +538,11 @@ test("the endless mixer prefers YouTube Music radio and keeps the classic search
 });
 
 test("same-genre mode keeps a fixed manual seed and limits radio drift", async () => {
-  const metalSeed = song("metal-seed", "Falling In Reverse");
+  const metalSeed = {
+    ...song("metal-seed", "Falling In Reverse"),
+    title: "Joseph",
+    channel: "Falling In Reverse - Thema"
+  };
   const driftedTrack = { ...song("rap-tail", "Rap Artist"), mediaHubAutoAdded: true };
   const radioTracks = [
     song("wrong-genre", "Hip Hop Artist"),

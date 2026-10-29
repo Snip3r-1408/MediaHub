@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.2 – 2026-10-29
+
+### Behoben
+
+- Lokalisierte YouTube-Kanalnamen wie „Falling In Reverse – Thema“ werden wieder
+  dem eigentlichen Künstler zugeordnet
+- Strukturierte Künstlerdaten aus YouTube Music haben bei der Genre-Erkennung
+  Vorrang vor Titel- und Kanaltexten
+- Der strenge Genre-Mix bleibt bei Titeln mit kurzem Namen wie „Joseph“ nicht
+  mehr in der Warteschleife hängen
+
 ## 0.13.1 – 2026-10-28
 
 ### Behoben
