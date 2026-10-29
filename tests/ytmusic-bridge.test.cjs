@@ -17,6 +17,7 @@ test("bridge origin checks accept only the local app surface", () => {
   assert.deepEqual(ROUTE_ACTIONS, {
     "/v1/search": "search",
     "/v1/radio": "radio",
+    "/v1/genres": "genres",
     "/v1/home": "home",
     "/v1/explore": "explore",
     "/v1/charts": "charts",

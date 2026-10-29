@@ -19,6 +19,8 @@ VENDOR_ROOT = PLUGIN_ROOT / "vendor"
 if VENDOR_ROOT.is_dir():
     sys.path.insert(0, str(VENDOR_ROOT))
 
+import requests
+
 
 try:
     from ytmusicapi import YTMusic
@@ -31,6 +33,10 @@ else:
 
 def _text(value: Any) -> str:
     return str(value or "").strip()
+
+
+def _artist_identity(value: Any) -> str:
+    return re.sub(r"[^\w]+", " ", _text(value).casefold(), flags=re.UNICODE).strip()
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -208,6 +214,40 @@ class Adapter:
         tracks = playlist.get("tracks") if isinstance(playlist, dict) else []
         return [normalised for item in (tracks or []) if (normalised := _normalise(item))][:limit]
 
+    def genres(self, artist: str) -> list[str]:
+        artist = artist.strip()
+        if not artist or len(artist) > 160:
+            raise ValueError("Ungültiger Künstlername")
+        response = requests.get(
+            "https://musicbrainz.org/ws/2/artist/",
+            params={"query": f'artist:"{artist}"', "fmt": "json", "limit": 5},
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "MediaHub/0.13.3 (https://github.com/Snip3r-1408/MediaHub)",
+            },
+            timeout=8,
+        )
+        response.raise_for_status()
+        identity = _artist_identity(artist)
+        matches = response.json().get("artists") or []
+        match = next(
+            (entry for entry in matches if _artist_identity(entry.get("name")) == identity),
+            None,
+        )
+        if not isinstance(match, dict):
+            return []
+        tags = sorted(
+            (tag for tag in (match.get("tags") or []) if _text(tag.get("name")) and _safe_int(tag.get("count")) >= 1),
+            key=lambda tag: _safe_int(tag.get("count")),
+            reverse=True,
+        )
+        names: list[str] = []
+        for tag in tags:
+            name = _text(tag.get("name")).casefold()
+            if name and name not in {"seen live", "favorites", "american"} and name not in names:
+                names.append(name)
+        return names[:8]
+
     def home(self, limit: int = 6) -> list[dict[str, Any]]:
         rows = self.client.get_home(limit=max(1, min(limit, 10)))
         sections = []
@@ -377,6 +417,8 @@ def main() -> None:
                 )
             elif action == "radio":
                 result = adapter.radio(_text(request.get("videoId")), int(request.get("limit") or 30))
+            elif action == "genres":
+                result = adapter.genres(_text(request.get("artist")))
             elif action == "home":
                 result = adapter.home(int(request.get("limit") or 6))
             elif action == "explore":

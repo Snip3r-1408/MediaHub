@@ -5,6 +5,7 @@
   const ALLOWED_ROUTES = new Set([
     "/v1/search",
     "/v1/radio",
+    "/v1/genres",
     "/v1/home",
     "/v1/explore",
     "/v1/charts",

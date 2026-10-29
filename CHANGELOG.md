@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.13.3 – 2026-10-29
+
+### Behoben
+
+- Die Genre-Prüfung läuft nun über die lokale MediaHub-Engine statt direkt im
+  WebRadio-Renderer und wird dadurch nicht mehr von Browser-Regeln blockiert
+- Leere Genre-Antworten älterer Versionen werden nicht mehr aus dem bisherigen
+  Zwischenspeicher übernommen
+- Der echte YouTube-Music-Radio-Endpunkt kann passende Titel wieder zuverlässig
+  in „Als Nächstes“ einfügen, während fremde Genre-Familien weiterhin abgewiesen
+  werden
+
 ## 0.13.2 – 2026-10-29
 
 ### Behoben

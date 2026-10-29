@@ -12,6 +12,7 @@ const HELPER_TIMEOUT = 15000;
 const ROUTE_ACTIONS = Object.freeze({
   "/v1/search": "search",
   "/v1/radio": "radio",
+  "/v1/genres": "genres",
   "/v1/home": "home",
   "/v1/explore": "explore",
   "/v1/charts": "charts",

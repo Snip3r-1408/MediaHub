@@ -7,7 +7,7 @@
   const MODE_KEY = "mediahub-play-mode-v1";
   const AUTO_MIX_KEY = "mediahub-auto-mix-v1";
   const MIX_STYLE_KEY = "mediahub-mix-style-v1";
-  const GENRE_CACHE_KEY = "mediahub-genre-cache-v1";
+  const GENRE_CACHE_KEY = "mediahub-genre-cache-v2";
   const STRICT_GENRE_MIGRATION_KEY = "mediahub-strict-genre-mix-v1";
   const MIX_BUFFER_TARGET = 12;
   const MIX_BUFFER_LOW_WATER = 5;
@@ -167,6 +167,10 @@
 
   function ytMusicRadio(videoId, limit = 30) {
     return videoId ? ytMusicRequest("/v1/radio", { videoId, limit }) : Promise.resolve(null);
+  }
+
+  function ytMusicGenres(artist) {
+    return artist ? ytMusicRequest("/v1/genres", { artist }) : Promise.resolve(null);
   }
 
   function ytMusicHome(limit = 6) {
@@ -850,6 +854,13 @@
       const controller = new AbortController();
       const timer = window.setTimeout(() => controller.abort(), 6500);
       try {
+        const bridgeTags = await ytMusicGenres(artist);
+        if (Array.isArray(bridgeTags)) {
+          const tags = bridgeTags.map(tag => cleanArtist(tag).toLowerCase()).filter(Boolean).slice(0, 8);
+          genreCache[key] = { tags, savedAt: Date.now() };
+          localStorage.setItem(GENRE_CACHE_KEY, JSON.stringify(genreCache));
+          return tags;
+        }
         const query = new URLSearchParams({ query: `artist:"${artist}"`, fmt: "json", limit: "3" });
         const response = await fetch(`https://musicbrainz.org/ws/2/artist/?${query}`, {
           headers: { Accept: "application/json" },

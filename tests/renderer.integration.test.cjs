@@ -439,7 +439,7 @@ for (const contextChange of ["playlist", "mix style"]) {
     const storage = {
       "mediahub-auto-mix-v1": "true",
       "mediahub-playlists-v1": JSON.stringify(playlists),
-      "mediahub-genre-cache-v1": JSON.stringify({
+      "mediahub-genre-cache-v2": JSON.stringify({
         "seed artist": { tags: ["metalcore"], savedAt: Date.now() }
       })
     };
@@ -567,7 +567,7 @@ test("same-genre mode keeps a fixed manual seed and limits radio drift", async (
       "mediahub-playlists-v1": JSON.stringify([
         { id: "queue", name: "Queue", items: [metalSeed, driftedTrack] }
       ]),
-      "mediahub-genre-cache-v1": JSON.stringify(genreCache)
+      "mediahub-genre-cache-v2": JSON.stringify(genreCache)
     },
     ytMusic(route) {
       return route === "/v1/radio" ? radioTracks : [];
