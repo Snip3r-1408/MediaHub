@@ -31,7 +31,8 @@ Ein Plugin sollte erlaubte Anbieter explizit deklarieren:
   "capabilities": ["web-session", "web-session-media"],
   "webSessionOrigins": [
     "https://music.youtube.com",
-    "https://accounts.google.com"
+    "https://accounts.google.com",
+    "https://consent.youtube.com"
   ]
 }
 ```

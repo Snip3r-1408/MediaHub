@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.14.0-beta.3 – 2026-10-30
+
+### YouTube-Einwilligungsseite freigegeben
+
+- `https://consent.youtube.com` ist nun als exakte Web-Session-Origin
+  deklariert
+- Der erste Start auf deutschen beziehungsweise europäischen Systemen wird
+  nicht mehr mit `ERR_FAILED (-2)` abgebrochen, wenn YouTube vor dem Musikdienst
+  seine Einwilligungsseite öffnet
+- Die Ursache wurde mit einer vollständig frischen, isolierten Sitzung gegen
+  WebRadio 1.0.7-beta.3 reproduziert und verifiziert
+
 ## 0.14.0-beta.2 – 2026-10-30
 
 ### Web-Sitzung stabilisiert
