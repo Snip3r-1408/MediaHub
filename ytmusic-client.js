@@ -12,12 +12,19 @@
     "/v1/album",
     "/v1/artist",
     "/v1/playlist",
-    "/v1/mood-playlists"
+    "/v1/mood-playlists",
+    "/v1/web-session/status",
+    "/v1/web-session/login",
+    "/v1/web-session/show",
+    "/v1/web-session/hide",
+    "/v1/web-session/load",
+    "/v1/web-session/command",
+    "/v1/web-session/reload"
   ]);
   let configPromise = null;
 
   function validConfig(config) {
-    if (!config || config.protocol !== 1 || config.available === false
+    if (!config || config.protocol !== 1 || (config.available === false && config.webSessionAvailable !== true)
       || !/^[a-f0-9]{64}$/i.test(String(config.token || ""))) return false;
     try {
       const url = new URL(config.url);

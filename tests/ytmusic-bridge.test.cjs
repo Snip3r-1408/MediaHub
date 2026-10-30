@@ -5,7 +5,13 @@ const os = require("node:os");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const { YtMusicBridge, ROUTE_ACTIONS, allowedOrigin, pythonCandidates } = require("../ytmusic-bridge");
+const {
+  YtMusicBridge,
+  ROUTE_ACTIONS,
+  WEB_SESSION_ROUTES,
+  allowedOrigin,
+  pythonCandidates
+} = require("../ytmusic-bridge");
 
 test("bridge origin checks accept only the local app surface", () => {
   assert.equal(allowedOrigin("null"), "null");
@@ -26,6 +32,8 @@ test("bridge origin checks accept only the local app surface", () => {
     "/v1/playlist": "playlist",
     "/v1/mood-playlists": "mood_playlists"
   });
+  assert.ok(WEB_SESSION_ROUTES.has("/v1/web-session/load"));
+  assert.ok(WEB_SESSION_ROUTES.has("/v1/web-session/command"));
 });
 
 test("bridge writes a private runtime config and rejects requests without its token", async t => {
@@ -50,7 +58,7 @@ test("bridge writes a private runtime config and rejects requests without its to
   assert.equal(denied.status, 401);
   const allowed = await fetch(`${config.url}/health`, { headers: { "X-MediaHub-Token": config.token } });
   assert.equal(allowed.status, 200);
-  assert.deepEqual(await allowed.json(), { available: true });
+  assert.deepEqual(await allowed.json(), { available: true, webSessionAvailable: false });
 
   const routed = [];
   bridge.call = async (action, payload) => {
@@ -70,6 +78,60 @@ test("bridge writes a private runtime config and rejects requests without its to
     assert.deepEqual(await response.json(), { ok: true, result: { action, marker: route } });
   }
   assert.deepEqual(routed.map(entry => entry.action), Object.values(ROUTE_ACTIONS));
+});
+
+test("bridge exposes only validated YouTube Music web-session operations", async t => {
+  const sourceRoot = path.resolve(__dirname, "..");
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "mediahub-web-session-test-"));
+  fs.copyFileSync(path.join(sourceRoot, "ytmusic_helper.py"), path.join(tempRoot, "ytmusic_helper.py"));
+  fs.symlinkSync(path.join(sourceRoot, "vendor"), path.join(tempRoot, "vendor"), "dir");
+  const calls = [];
+  const state = { state: "paused", title: "Test", artist: "Artist", duration: 180, position: 12 };
+  const webSession = {
+    create(options) { calls.push(["create", options]); return { sessionId: options.sessionId, state: "idle" }; },
+    getState(sessionId) { calls.push(["getState", sessionId]); return { ...state }; },
+    getCapabilities() { return { commands: { play: true, pause: true, stop: true }, encryptedMedia: false }; },
+    onState(_sessionId, callback) { callback(state); return () => {}; },
+    onError() { return () => {}; },
+    openLogin(sessionId) { calls.push(["openLogin", sessionId]); return Promise.resolve({ success: true }); },
+    show(sessionId, bounds) { calls.push(["show", sessionId, bounds]); return Promise.resolve({ success: true }); },
+    hide(sessionId) { calls.push(["hide", sessionId]); return { success: true }; },
+    reload(sessionId) { calls.push(["reload", sessionId]); return { success: true }; },
+    load(sessionId, url) { calls.push(["load", sessionId, url]); return Promise.resolve({ success: true }); },
+    command(sessionId, command) { calls.push(["command", sessionId, command]); return Promise.resolve({ success: true }); }
+  };
+  const bridge = new YtMusicBridge({ root: tempRoot, logger: { info() {}, warn() {} }, webSession });
+  t.after(() => {
+    bridge.stop();
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  });
+
+  await bridge.start();
+  const config = JSON.parse(fs.readFileSync(path.join(tempRoot, ".runtime", "ytmusic-bridge.json"), "utf8"));
+  assert.equal(config.webSessionAvailable, true);
+  const request = async (route, payload = {}) => {
+    const response = await fetch(`${config.url}${route}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-MediaHub-Token": config.token },
+      body: JSON.stringify(payload)
+    });
+    return { response, body: await response.json() };
+  };
+
+  const status = await request("/v1/web-session/status");
+  assert.equal(status.response.status, 200);
+  assert.equal(status.body.result.available, true);
+
+  const bounds = { x: 200, y: 100, width: 800, height: 600 };
+  const login = await request("/v1/web-session/login", { bounds });
+  assert.equal(login.body.result.success, true);
+  const loaded = await request("/v1/web-session/load", { videoId: "qMXESlny4-I", autoplay: true });
+  assert.equal(loaded.body.result.success, true);
+  assert.ok(calls.some(call => call[0] === "load" && call[2] === "https://music.youtube.com/watch?v=qMXESlny4-I"));
+  assert.ok(calls.some(call => call[0] === "command" && call[2].type === "play"));
+
+  const invalid = await request("/v1/web-session/load", { videoId: "https://evil.invalid/" });
+  assert.equal(invalid.response.status, 400);
 });
 
 test("browser client forwards structured catalogue responses to the renderer", async () => {

@@ -1,12 +1,13 @@
 {
   "id": "mediahub",
   "name": "MediaHub",
-  "version": "0.13.9",
+  "version": "0.14.0-beta.1",
   "description": "YouTube Music für WebRadio.",
   "main": "main.js",
   "renderer": "renderer.js",
   "http-origin": true,
   "permissions": ["navigation", "player"],
-  "capabilities": ["http-origin", "local-assets", "external-origin", "youtube-iframe", "youtube-api", "player"],
-  "engines": { "webradio": ">=1.0.7-alpha.5" }
+  "capabilities": ["http-origin", "local-assets", "external-origin", "youtube-iframe", "youtube-api", "player", "web-session", "web-session-media"],
+  "webSessionOrigins": ["https://music.youtube.com", "https://accounts.google.com"],
+  "engines": { "webradio": ">=1.0.7-beta.3" }
 }

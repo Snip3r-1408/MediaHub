@@ -23,6 +23,8 @@
   const PLAYBACK_STABLE_MS = 12000;
   const FAILED_VIDEO_TTL = 30 * 24 * 60 * 60 * 1000;
   const MAX_FAILED_VIDEO_CACHE = 500;
+  const WEB_SESSION_POLL_MS = 1000;
+  const WEB_SESSION_RETRY_MS = 2000;
   let disposeView = null;
   let ytMusicClientPromise = null;
   let ytMusicClientFrame = null;
@@ -47,15 +49,15 @@
     .mediahub.mh-has-artwork::after{opacity:.13}.mediahub *{box-sizing:border-box}.mediahub button,.mediahub input,.mediahub select{font-family:inherit}.mediahub button:focus-visible,.mediahub input:focus-visible,.mediahub select:focus-visible{outline:2px solid var(--mh-accent);outline-offset:2px}
     .mh-hidden{display:none!important}.mh-app{height:100%;min-height:560px;overflow:hidden}.mh-btn{border:0;border-radius:999px;padding:10px 16px;background:var(--mh-accent);color:#fff;font:inherit;font-weight:750;cursor:pointer;transition:background .18s ease,color .18s ease,transform .18s ease,box-shadow .18s ease}.mh-btn:hover{background:var(--mh-accent-hover);transform:translateY(-1px);box-shadow:0 10px 28px var(--mh-glow)}.mh-btn:disabled{opacity:.5;cursor:wait;transform:none;box-shadow:none}.mh-btn.ghost{background:color-mix(in srgb,var(--mh-text) 7%,transparent);color:var(--mh-muted)}.mh-btn.ghost:hover{background:color-mix(in srgb,var(--mh-text) 13%,transparent);color:var(--mh-text)}.mh-icon-btn{width:40px;height:40px;display:grid;place-items:center;padding:0;border-radius:50%}.mh-icon-btn svg,.mh-mini svg,.mh-plus svg,.mh-nav-item svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
     .mh-welcome{min-height:560px;display:grid;place-items:center;padding:30px;text-align:center;background:radial-gradient(circle at 50% 36%,var(--mh-glow),transparent 31%)}.mh-welcome-inner{max-width:480px;padding:34px}.mh-mark{width:62px;height:62px;margin:0 auto 22px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--mh-accent),#b45cff);font-size:24px;box-shadow:0 18px 55px var(--mh-glow)}.mh-eyebrow{margin:0 0 9px;color:var(--mh-accent-hover);font-size:10px;font-weight:850;letter-spacing:.2em}.mh-welcome h1{margin:0 0 12px;font-size:34px;letter-spacing:-.04em}.mh-welcome p{margin:0 auto 25px;color:var(--mh-muted);font-size:15px;line-height:1.65}
-    .mh-top{height:70px;display:grid;grid-template-columns:176px minmax(240px,620px) 1fr 42px;align-items:center;gap:20px;padding:10px 22px;border-bottom:1px solid var(--mh-border);background:color-mix(in srgb,var(--mh-bg) 86%,transparent);backdrop-filter:blur(22px)}.mh-brand{display:flex;align-items:center;gap:11px}.mh-brand-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--mh-accent),#a954ff);font-size:13px;font-weight:900;box-shadow:0 9px 26px var(--mh-glow)}.mh-brand h1{margin:0;font-size:20px;letter-spacing:-.045em}.mh-search{display:flex;gap:4px;padding:4px 4px 4px 15px;border:1px solid var(--mh-border);border-radius:12px;background:color-mix(in srgb,var(--mh-surface) 78%,transparent);transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}.mh-search:focus-within{border-color:color-mix(in srgb,var(--mh-accent) 70%,transparent);background:var(--mh-surface);box-shadow:0 0 0 3px var(--mh-glow)}.mh-input,.mh-select{min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:7px 2px;font-size:14px}.mh-search .mh-input::placeholder{color:var(--mh-muted)}.mh-select{padding:8px 9px;border-radius:9px;background:color-mix(in srgb,var(--mh-text) 7%,transparent)}.mh-select option{background:var(--mh-surface);color:var(--mh-text)}.mh-top-spacer{min-width:0}.mh-error{margin:0 0 14px;padding:10px 13px;border:1px solid #ff727232;border-radius:10px;background:#ff5f5f12;color:#ffaaaa;font-size:12px}
+    .mh-top{height:70px;display:grid;grid-template-columns:176px minmax(240px,620px) 1fr auto 42px;align-items:center;gap:12px;padding:10px 22px;border-bottom:1px solid var(--mh-border);background:color-mix(in srgb,var(--mh-bg) 86%,transparent);backdrop-filter:blur(22px)}.mh-brand{display:flex;align-items:center;gap:11px}.mh-brand-mark{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(145deg,var(--mh-accent),#a954ff);font-size:13px;font-weight:900;box-shadow:0 9px 26px var(--mh-glow)}.mh-brand h1{margin:0;font-size:20px;letter-spacing:-.045em}.mh-search{display:flex;gap:4px;padding:4px 4px 4px 15px;border:1px solid var(--mh-border);border-radius:12px;background:color-mix(in srgb,var(--mh-surface) 78%,transparent);transition:border-color .18s ease,background .18s ease,box-shadow .18s ease}.mh-search:focus-within{border-color:color-mix(in srgb,var(--mh-accent) 70%,transparent);background:var(--mh-surface);box-shadow:0 0 0 3px var(--mh-glow)}.mh-input,.mh-select{min-width:0;border:0;background:transparent;color:inherit;font:inherit;outline:0}.mh-search .mh-input{flex:1;padding:7px 2px;font-size:14px}.mh-search .mh-input::placeholder{color:var(--mh-muted)}.mh-select{padding:8px 9px;border-radius:9px;background:color-mix(in srgb,var(--mh-text) 7%,transparent)}.mh-select option{background:var(--mh-surface);color:var(--mh-text)}.mh-top-spacer{min-width:0}.mh-top-actions{display:flex;justify-content:flex-end}.mh-provider-view{display:flex;align-items:center;gap:7px;padding:9px 12px;font-size:11px;white-space:nowrap}.mh-provider-view svg{width:15px;height:15px}.mh-error{margin:0 0 14px;padding:10px 13px;border:1px solid #ff727232;border-radius:10px;background:#ff5f5f12;color:#ffaaaa;font-size:12px}
     .mh-content{height:calc(100% - 70px);display:grid;grid-template-columns:176px minmax(360px,1fr);grid-template-areas:"sidebar workspace";min-height:0}.mh-sidebar{grid-area:sidebar;min-width:0;overflow:hidden;padding:20px 12px;border-right:1px solid var(--mh-border);background:color-mix(in srgb,var(--mh-sidebar) 90%,transparent)}.mh-nav{display:grid;gap:5px}.mh-nav-item{width:100%;display:flex;align-items:center;gap:12px;border:0;border-radius:9px;padding:11px 12px;background:transparent;color:var(--mh-muted);font:inherit;font-size:13px;font-weight:680;text-align:left;cursor:pointer;transition:.17s ease}.mh-nav-item:hover{background:color-mix(in srgb,var(--mh-text) 7%,transparent);color:var(--mh-text)}.mh-nav-item.active{background:color-mix(in srgb,var(--mh-accent) 19%,transparent);color:var(--mh-text)}.mh-nav-item.active svg{color:var(--mh-accent-hover)}.mh-side-rule{height:1px;margin:19px 8px;background:var(--mh-border)}.mh-side-label{margin:0 10px 9px;color:var(--mh-muted);font-size:9px;font-weight:850;letter-spacing:.16em}.mh-sidebar-playlists{display:grid;gap:2px;max-height:calc(100% - 190px);overflow:auto}.mh-sidebar-list{width:100%;overflow:hidden;border:0;border-radius:8px;padding:8px 10px;background:transparent;color:var(--mh-muted);font:inherit;font-size:11px;text-align:left;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}.mh-sidebar-list:hover{background:color-mix(in srgb,var(--mh-text) 7%,transparent);color:var(--mh-text)}.mh-sidebar-list.active{color:var(--mh-text)}.mh-workspace{grid-area:workspace;min-width:0;min-height:0;overflow:auto;padding:20px 24px 30px}.mh-queue-panel{min-width:0;min-height:0;overflow:hidden;border-radius:12px;background:color-mix(in srgb,var(--mh-surface) 58%,transparent)}.mh-queue-heading{display:flex;justify-content:space-between;align-items:end;margin:0;padding:16px 16px 12px}.mh-queue-heading h2{margin:0;font-size:17px;letter-spacing:-.025em}.mh-queue-heading span{color:var(--mh-muted);font-size:10px}
-    .mh-player,.mh-library{min-width:0}.mh-player{margin-bottom:24px}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:0 2px 11px}.mh-player-label h2{margin:0;font-size:17px;letter-spacing:-.025em}.mh-player-label span{max-width:60%;overflow:hidden;color:var(--mh-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.mh-player-placeholder{min-height:255px;display:grid;place-items:center;overflow:hidden;border:0;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--mh-surface) 82%,transparent),color-mix(in srgb,var(--mh-accent) 10%,var(--mh-bg)));color:var(--mh-muted);font-size:12px;text-align:center;padding:25px;box-shadow:var(--shadow-sm,0 15px 45px #0003)}.mh-player-idle .mh-player-placeholder{min-height:118px}.mh-player-idle .mh-player-empty{grid-template-columns:auto 1fr;align-items:center;justify-items:start;text-align:left}.mh-player-idle .mh-player-empty-mark{width:48px;height:48px}.mh-player-empty{display:grid;justify-items:center;gap:13px}.mh-player-empty-mark{width:58px;height:58px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--mh-text) 9%,transparent);color:var(--mh-muted);font-size:23px}.mh-frame{height:300px;min-height:220px;overflow:hidden;border-radius:12px;background:#000;box-shadow:0 20px 50px #0006}.mh-frame iframe{width:100%;height:100%;border:0;display:block}
+    .mh-player,.mh-library{min-width:0}.mh-player{margin-bottom:24px}.mh-player-label{display:flex;justify-content:space-between;align-items:center;margin:0 2px 11px}.mh-player-label h2{margin:0;font-size:17px;letter-spacing:-.025em}.mh-player-label span{max-width:60%;overflow:hidden;color:var(--mh-muted);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.mh-player-placeholder{min-height:255px;display:grid;place-items:center;overflow:hidden;border:0;border-radius:12px;background:linear-gradient(135deg,color-mix(in srgb,var(--mh-surface) 82%,transparent),color-mix(in srgb,var(--mh-accent) 10%,var(--mh-bg)));color:var(--mh-muted);font-size:12px;text-align:center;padding:25px;box-shadow:var(--shadow-sm,0 15px 45px #0003)}.mh-player-idle .mh-player-placeholder{min-height:118px}.mh-player-idle .mh-player-empty{grid-template-columns:auto 1fr;align-items:center;justify-items:start;text-align:left}.mh-player-idle .mh-player-empty-mark{width:48px;height:48px}.mh-player-empty{display:grid;justify-items:center;gap:13px}.mh-player-empty-mark{width:58px;height:58px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--mh-text) 9%,transparent);color:var(--mh-muted);font-size:23px}.mh-frame{height:300px;min-height:220px;overflow:hidden;border-radius:12px;background:#000;box-shadow:0 20px 50px #0006}.mh-frame iframe{width:100%;height:100%;border:0;display:block}.mh-web-player{min-height:210px;display:grid;grid-template-columns:minmax(150px,210px) minmax(0,1fr);gap:24px;align-items:center;overflow:hidden;border-radius:14px;padding:22px;background:linear-gradient(125deg,color-mix(in srgb,var(--mh-accent) 18%,var(--mh-surface)),color-mix(in srgb,var(--mh-surface) 90%,var(--mh-bg)));box-shadow:0 18px 48px #0004}.mh-web-art{aspect-ratio:1;width:min(100%,190px);overflow:hidden;border-radius:12px;background:color-mix(in srgb,var(--mh-text) 8%,transparent);box-shadow:0 14px 34px #0005}.mh-web-art img{width:100%;height:100%;object-fit:cover}.mh-web-copy{display:grid;min-width:0;gap:7px}.mh-web-kicker{color:var(--mh-accent-hover);font-size:9px;font-weight:850;letter-spacing:.18em}.mh-web-copy strong{overflow:hidden;font-size:clamp(22px,4cqw,36px);letter-spacing:-.045em;text-overflow:ellipsis;white-space:nowrap}.mh-web-copy>span:not(.mh-web-kicker){overflow:hidden;color:var(--mh-muted);font-size:13px;text-overflow:ellipsis;white-space:nowrap}.mh-web-state{margin-top:7px;color:var(--mh-muted);font-size:11px;line-height:1.5}.mh-web-actions{display:flex;gap:8px;margin-top:8px}.mh-web-actions .mh-btn{font-size:11px}
     .mh-library{padding-top:1px}.mh-tabs{display:flex;align-items:center;gap:24px;margin-bottom:14px}.mh-tab{position:relative;border:0;background:transparent;color:var(--mh-muted);font:inherit;font-size:14px;font-weight:760;padding:7px 0 10px;cursor:pointer}.mh-tab.active{color:var(--mh-text)}.mh-tab.active:after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:2px;background:var(--mh-accent)}.mh-count{margin-left:auto;padding-bottom:7px;color:var(--mh-muted);font-size:10px}.mh-list,.mh-queue,.mh-catalog{margin:0;padding:0;list-style:none;overflow:auto}.mh-list{display:grid;grid-template-columns:1fr;gap:2px;max-height:300px;padding-right:4px}.mh-queue{height:auto;max-height:420px;padding:2px 8px 12px}.mh-empty{margin:0;padding:30px 8px;color:var(--mh-muted);font-size:12px;line-height:1.55}.mh-library-overview{min-height:0;display:block;padding:0;background:transparent}
     .mh-catalog{display:grid;gap:30px;max-height:none;padding:1px 4px 28px 0;overflow:visible}.mh-catalog-intro{display:flex;justify-content:space-between;align-items:end;gap:16px}.mh-catalog-intro h2{margin:0;font-size:clamp(27px,4cqw,38px);letter-spacing:-.052em;line-height:1}.mh-catalog-intro p{margin:8px 0 0;color:var(--mh-muted);font-size:12px}.mh-filter-chips{display:flex;gap:8px;overflow:auto;padding:0 0 2px;scrollbar-width:none}.mh-filter-chips::-webkit-scrollbar{display:none}.mh-filter-chip{flex:none;border:1px solid var(--mh-border);border-radius:8px;padding:8px 12px;background:color-mix(in srgb,var(--mh-surface) 72%,transparent);color:var(--mh-text);font:inherit;font-size:11px;font-weight:650;cursor:pointer;transition:.16s ease}.mh-filter-chip:hover{border-color:color-mix(in srgb,var(--mh-accent) 55%,var(--mh-border));background:color-mix(in srgb,var(--mh-accent) 14%,var(--mh-surface))}.mh-catalog-section{display:grid;gap:13px;scroll-margin-top:12px}.mh-catalog-heading{display:flex;align-items:center;justify-content:space-between}.mh-catalog-heading h3{margin:0;font-size:20px;letter-spacing:-.035em}.mh-card-grid{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(128px,25%);gap:13px;overflow-x:auto;overflow-y:hidden;padding:2px 2px 9px;scroll-snap-type:x proximity;scrollbar-width:thin}.mh-catalog-card{position:relative;min-width:0;border:0;border-radius:10px;padding:0;background:transparent;color:inherit;text-align:left;scroll-snap-align:start;transition:transform .2s ease}.mh-catalog-card:hover,.mh-catalog-card:focus-within{transform:translateY(-3px)}.mh-catalog-open{width:100%;display:block;border:0;padding:0;background:transparent;color:inherit;text-align:left;cursor:pointer}.mh-catalog-cover{aspect-ratio:1;width:100%;display:grid;place-items:center;overflow:hidden;border-radius:8px;background:linear-gradient(145deg,color-mix(in srgb,var(--mh-accent) 28%,var(--mh-surface)),var(--mh-surface));color:var(--mh-muted);font-size:24px;box-shadow:0 8px 22px #0002;transition:filter .2s ease,transform .2s ease}.mh-catalog-card:hover .mh-catalog-cover{filter:brightness(.86);transform:scale(1.015)}.mh-catalog-cover img{width:100%;height:100%;object-fit:cover}.mh-kind-artist .mh-catalog-cover{border-radius:50%}.mh-kind-mood .mh-catalog-cover{border-radius:14px}.mh-catalog-copy{display:grid;gap:4px;padding:10px 1px 2px}.mh-catalog-copy strong,.mh-catalog-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-catalog-copy strong{font-size:12px;line-height:1.3}.mh-catalog-copy span{color:var(--mh-muted);font-size:10px}.mh-catalog-add{position:absolute;right:9px;top:9px;width:31px;height:31px;display:grid;place-items:center;border:0;border-radius:50%;background:color-mix(in srgb,var(--mh-bg) 84%,transparent);color:var(--mh-text);cursor:pointer;opacity:0;transform:translateY(4px);transition:.17s ease;backdrop-filter:blur(10px)}.mh-catalog-card:hover .mh-catalog-add,.mh-catalog-card:focus-within .mh-catalog-add,.mh-catalog-add:focus-visible{opacity:1;transform:none}.mh-catalog-add:hover{background:var(--mh-accent)}.mh-catalog-add svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2}.mh-catalog-loading{min-height:180px;display:grid;place-items:center;color:var(--mh-muted);font-size:12px}.mh-catalog-hero{display:grid;grid-template-columns:126px minmax(0,1fr);gap:22px;align-items:end;padding:18px;border-radius:14px;background:linear-gradient(135deg,color-mix(in srgb,var(--mh-accent) 18%,var(--mh-surface)),color-mix(in srgb,var(--mh-surface) 76%,transparent))}.mh-catalog-hero img{width:126px;height:126px;border-radius:10px;object-fit:cover;background:var(--mh-surface);box-shadow:0 12px 34px #0004}.mh-catalog-hero h2{margin:0 0 6px;font-size:clamp(25px,4cqw,38px);letter-spacing:-.05em}.mh-catalog-hero p{margin:0;color:var(--mh-muted);font-size:12px;line-height:1.5}
     .mh-result{display:grid;grid-template-columns:58px minmax(0,1fr) 30px;gap:11px;align-items:center;min-width:0;padding:7px 8px;border-radius:8px;cursor:pointer;transition:.14s ease}.mh-result:hover{background:color-mix(in srgb,var(--mh-text) 7%,transparent)}.mh-result.active{background:color-mix(in srgb,var(--mh-accent) 17%,transparent)}.mh-result img{width:58px;height:44px;border-radius:6px;object-fit:cover;background:var(--mh-surface)}.mh-copy{display:grid;min-width:0;gap:3px}.mh-copy>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-copy strong{font-size:12px}.mh-copy span{color:var(--mh-muted);font-size:10px}.mh-plus,.mh-remove{border:0;background:transparent;color:var(--mh-muted);cursor:pointer}.mh-plus{width:28px;height:28px;display:grid;place-items:center;border-radius:50%}.mh-plus:hover{background:color-mix(in srgb,var(--mh-text) 13%,transparent);color:var(--mh-text)}
     .mh-playlist-bar{display:grid;grid-template-columns:minmax(160px,280px) auto auto auto;justify-content:start;gap:6px;margin:0;padding:0 12px 11px}.mh-mini{padding:7px 9px;border-radius:8px}.mh-mini.active{background:var(--mh-accent);color:#fff}.mh-mix-style{width:100%;font-size:10px}.mh-menu{position:relative}.mh-menu>summary{list-style:none}.mh-menu>summary::-webkit-details-marker{display:none}.mh-menu-panel{position:absolute;z-index:20;right:0;top:44px;width:210px;padding:8px;display:grid;gap:6px;border:1px solid var(--mh-border);border-radius:12px;background:var(--mh-surface);box-shadow:0 18px 42px #0009}.mh-menu-panel .mh-select{width:100%}.mh-menu-panel .mh-btn{width:100%;display:flex;align-items:center;gap:9px;justify-content:flex-start;font-size:11px}.mh-menu-panel .mh-btn svg{width:16px;height:16px}.mh-queue-row{display:grid;grid-template-columns:48px minmax(0,1fr) 30px;gap:11px;align-items:center;padding:7px 9px;border-radius:8px;cursor:pointer;transition:.14s ease}.mh-queue-row:hover{background:color-mix(in srgb,var(--mh-text) 7%,transparent)}.mh-queue-row.active{background:linear-gradient(90deg,color-mix(in srgb,var(--mh-accent) 24%,transparent),transparent)}.mh-queue-cover{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--mh-surface)}.mh-queue-copy{display:grid;min-width:0;gap:3px}.mh-queue-copy strong,.mh-queue-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mh-queue-copy strong{font-size:12px}.mh-queue-copy span{color:var(--mh-muted);font-size:10px}.mh-remove{width:28px;height:28px;border-radius:50%;font-size:15px}.mh-remove:hover{background:color-mix(in srgb,var(--mh-text) 11%,transparent);color:var(--mh-text)}
-    @container(max-width:980px){.mh-top{grid-template-columns:150px minmax(220px,1fr) 42px}.mh-top-spacer{display:none}.mh-content{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"sidebar" "workspace"}.mh-sidebar{display:flex;align-items:center;padding:8px 18px;border-right:0;border-bottom:1px solid var(--mh-border);overflow:auto}.mh-nav{display:flex;gap:4px}.mh-nav-item{width:auto;padding:8px 11px}.mh-side-rule,.mh-side-label,.mh-sidebar-playlists{display:none}.mh-workspace{padding-top:17px}.mh-list{grid-template-columns:1fr}.mh-card-grid{grid-auto-columns:minmax(130px,34%)}}
-    @container(max-width:700px){.mediahub,.mh-app{min-height:700px;height:auto;overflow:visible}.mh-top{grid-template-columns:42px minmax(0,1fr) 42px;height:auto;padding:10px 13px;gap:9px}.mh-brand h1{display:none}.mh-brand{justify-content:center}.mh-brand-mark{width:38px}.mh-search{grid-column:2}.mh-content{height:auto;grid-template-columns:1fr;grid-template-rows:auto auto;grid-template-areas:"sidebar" "workspace"}.mh-sidebar{position:sticky;top:0;z-index:8;background:var(--mh-sidebar)}.mh-workspace{overflow:visible;padding:17px 16px 24px}.mh-frame{height:250px}.mh-queue{max-height:360px}.mh-playlist-bar{grid-template-columns:minmax(0,1fr) auto auto auto}.mh-catalog{max-height:none}.mh-card-grid{grid-auto-columns:minmax(124px,42%)}.mh-catalog-intro h2{font-size:28px}}
+    @container(max-width:980px){.mh-top{grid-template-columns:150px minmax(220px,1fr) auto 42px}.mh-top-spacer{display:none}.mh-content{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"sidebar" "workspace"}.mh-sidebar{display:flex;align-items:center;padding:8px 18px;border-right:0;border-bottom:1px solid var(--mh-border);overflow:auto}.mh-nav{display:flex;gap:4px}.mh-nav-item{width:auto;padding:8px 11px}.mh-side-rule,.mh-side-label,.mh-sidebar-playlists{display:none}.mh-workspace{padding-top:17px}.mh-list{grid-template-columns:1fr}.mh-card-grid{grid-auto-columns:minmax(130px,34%)}}
+    @container(max-width:700px){.mediahub,.mh-app{min-height:700px;height:auto;overflow:visible}.mh-top{grid-template-columns:42px minmax(0,1fr) auto 42px;height:auto;padding:10px 13px;gap:9px}.mh-brand h1{display:none}.mh-brand{justify-content:center}.mh-brand-mark{width:38px}.mh-search{grid-column:2}.mh-provider-view span{display:none}.mh-provider-view{width:40px;height:40px;padding:0;justify-content:center}.mh-content{height:auto;grid-template-columns:1fr;grid-template-rows:auto auto;grid-template-areas:"sidebar" "workspace"}.mh-sidebar{position:sticky;top:0;z-index:8;background:var(--mh-sidebar)}.mh-workspace{overflow:visible;padding:17px 16px 24px}.mh-frame{height:250px}.mh-web-player{grid-template-columns:120px minmax(0,1fr);gap:16px;padding:16px}.mh-queue{max-height:360px}.mh-playlist-bar{grid-template-columns:minmax(0,1fr) auto auto auto}.mh-catalog{max-height:none}.mh-card-grid{grid-auto-columns:minmax(124px,42%)}.mh-catalog-intro h2{font-size:28px}}
     @container(max-width:520px){.mh-top{grid-template-columns:minmax(0,1fr) 40px}.mh-brand{display:none}.mh-search{grid-column:1}.mh-workspace{padding:15px 13px 22px}.mh-frame{height:225px}.mh-search .mh-input{font-size:12px}.mh-nav-item{padding:8px 10px}.mh-nav-item span{display:none}.mh-card-grid{grid-auto-columns:minmax(118px,58%)}.mh-catalog-hero{grid-template-columns:88px minmax(0,1fr);gap:13px;padding:12px}.mh-catalog-hero img{width:88px;height:88px}.mh-catalog-hero h2{font-size:24px}}
     @media(hover:none){.mh-catalog-add{opacity:1;transform:none}}
   `;
@@ -204,6 +206,30 @@
     return ytMusicRequest("/v1/mood-playlists", { params });
   }
 
+  function ytMusicWebSessionStatus() {
+    return ytMusicRequest("/v1/web-session/status", {});
+  }
+
+  function ytMusicWebSessionLogin(bounds) {
+    return ytMusicRequest("/v1/web-session/login", { bounds });
+  }
+
+  function ytMusicWebSessionShow(bounds) {
+    return ytMusicRequest("/v1/web-session/show", { bounds });
+  }
+
+  function ytMusicWebSessionHide() {
+    return ytMusicRequest("/v1/web-session/hide", {});
+  }
+
+  function ytMusicWebSessionLoad(videoId) {
+    return ytMusicRequest("/v1/web-session/load", { videoId, autoplay: true });
+  }
+
+  function ytMusicWebSessionCommand(type) {
+    return ytMusicRequest("/v1/web-session/command", { type });
+  }
+
   function disposeYtMusicClient() {
     ytMusicClientFrame?.remove();
     ytMusicClientFrame = null;
@@ -252,6 +278,13 @@
     let frameOrigin = null;
     let frameLoadPromise = null;
     let playerReady = false;
+    let webSessionAvailable = null;
+    let webSessionCheckPromise = null;
+    let webSessionPollTimer = null;
+    let webSessionViewVisible = false;
+    let webSessionState = null;
+    let webSessionPlaybackToken = 0;
+    let webSessionPlayRetries = 0;
     let currentTab = "results";
     let currentSection = "home";
     let catalogueRequestToken = 0;
@@ -336,8 +369,15 @@
     logout.title = "Abmelden";
     logout.setAttribute("aria-label", "Abmelden");
     logout.append(icon("logout"));
+    const providerViewButton = el("button", "mh-btn ghost mh-provider-view mh-hidden");
+    providerViewButton.type = "button";
+    providerViewButton.title = "YouTube Music öffnen";
+    providerViewButton.setAttribute("aria-label", "YouTube Music öffnen");
+    providerViewButton.append(icon("compass"), el("span", "", "YouTube öffnen"));
+    const topActions = el("div", "mh-top-actions");
+    topActions.append(providerViewButton);
     const top = el("header", "mh-top");
-    top.append(brand, form, el("div", "mh-top-spacer"), logout);
+    top.append(brand, form, el("div", "mh-top-spacer"), topActions, logout);
     const error = el("p", "mh-error");
     error.hidden = true;
 
@@ -441,14 +481,182 @@
     const save = () => localStorage.setItem(STORE_KEY, JSON.stringify(playlists));
     const post = message => frame?.contentWindow?.postMessage(message, frameOrigin || "*");
 
+    function providerViewBounds() {
+      const rect = workspace.getBoundingClientRect?.() || root.getBoundingClientRect?.();
+      return {
+        x: Math.max(0, Math.round(Number(rect?.left) || 0)),
+        y: Math.max(70, Math.round(Number(rect?.top) || 70)),
+        width: Math.max(320, Math.round(Number(rect?.width) || 900)),
+        height: Math.max(240, Math.round(Number(rect?.height) || 620))
+      };
+    }
+
+    function updateProviderViewButton() {
+      providerViewButton.classList.toggle("mh-hidden", webSessionAvailable !== true);
+      providerViewButton.title = webSessionViewVisible ? "Zurück zu MediaHub" : "YouTube Music öffnen";
+      providerViewButton.setAttribute("aria-label", providerViewButton.title);
+      providerViewButton.replaceChildren(
+        icon(webSessionViewVisible ? "home" : "compass"),
+        el("span", "", webSessionViewVisible ? "MediaHub anzeigen" : "YouTube öffnen")
+      );
+    }
+
+    async function ensureWebSessionBackend({ refresh = false } = {}) {
+      if (!refresh && webSessionAvailable !== null) return webSessionAvailable;
+      if (webSessionCheckPromise) return webSessionCheckPromise;
+      webSessionCheckPromise = (async () => {
+        const status = await ytMusicWebSessionStatus();
+        webSessionAvailable = Boolean(status?.available);
+        if (status?.state) webSessionState = status.state;
+        updateProviderViewButton();
+        return webSessionAvailable;
+      })().finally(() => { webSessionCheckPromise = null; });
+      return webSessionCheckPromise;
+    }
+
+    async function showProviderSession({ login: openLogin = false } = {}) {
+      if (!await ensureWebSessionBackend({ refresh: webSessionAvailable === false })) {
+        showError("Die sichere YouTube-Music-Sitzung ist nicht verfügbar. Bitte WebRadio 1.0.7-beta.3 oder neuer verwenden.");
+        return false;
+      }
+      const bounds = providerViewBounds();
+      const result = openLogin
+        ? await ytMusicWebSessionLogin(bounds)
+        : await ytMusicWebSessionShow(bounds);
+      if (!result?.success && result?.state !== "loading") {
+        showError("YouTube Music konnte nicht geöffnet werden. Bitte MediaHub neu laden.");
+        return false;
+      }
+      webSessionViewVisible = true;
+      updateProviderViewButton();
+      return true;
+    }
+
+    async function hideProviderSession() {
+      if (webSessionAvailable === true) await ytMusicWebSessionHide();
+      webSessionViewVisible = false;
+      updateProviderViewButton();
+    }
+
+    function clearWebSessionPolling() {
+      if (webSessionPollTimer) window.clearTimeout(webSessionPollTimer);
+      webSessionPollTimer = null;
+    }
+
+    function webSessionStatusText(state) {
+      if (state === "playing") return "Wiedergabe über deine sichere YouTube-Music-Sitzung";
+      if (state === "paused") return "Pausiert · Steuerung über die WebRadio-Playerleiste";
+      if (state === "loading") return "YouTube Music lädt den Titel …";
+      if (state === "error") return "YouTube Music konnte den Titel nicht laden";
+      return "Bereit · bei Bedarf YouTube Music öffnen und dort anmelden";
+    }
+
+    function renderWebSessionPlayer(item = selected, state = webSessionState) {
+      if (!item) return;
+      const shell = el("div", "mh-web-player");
+      const art = el("div", "mh-web-art");
+      const image = document.createElement("img");
+      image.src = state?.artwork || item.thumbnail || "";
+      image.alt = "";
+      art.append(image);
+      const copy = el("div", "mh-web-copy");
+      const title = decode(state?.title || item.title || "Jetzt läuft");
+      const artist = decode(state?.artist || item.channel || "YouTube Music");
+      const status = el("p", "mh-web-state", webSessionStatusText(state?.state));
+      const open = el("button", "mh-btn ghost", "YouTube Music öffnen");
+      open.type = "button";
+      open.addEventListener("click", () => showProviderSession({ login: state?.state === "idle" }));
+      const actions = el("div", "mh-web-actions");
+      actions.append(open);
+      copy.append(el("span", "mh-web-kicker", "MEDIAHUB · YOUTUBE MUSIC"), el("strong", "", title), el("span", "", artist), status, actions);
+      shell.append(art, copy);
+      playerHost.className = "";
+      playerHost.replaceChildren(shell);
+      playerTitle.textContent = title || "Jetzt läuft";
+      playerStatus.textContent = state?.state === "playing" ? "YouTube Music · spielt" : "YouTube Music";
+    }
+
+    function scheduleWebSessionPoll(token, delay = WEB_SESSION_POLL_MS) {
+      clearWebSessionPolling();
+      if (disposed || token !== playbackToken || webSessionAvailable !== true) return;
+      webSessionPollTimer = window.setTimeout(() => pollWebSession(token), delay);
+    }
+
+    function startWebSessionPolling(token) {
+      clearWebSessionPolling();
+      pollWebSession(token).catch(() => scheduleWebSessionPoll(token, WEB_SESSION_RETRY_MS));
+    }
+
+    async function pollWebSession(token) {
+      webSessionPollTimer = null;
+      if (disposed || token !== playbackToken || webSessionAvailable !== true) return;
+      const previous = webSessionState;
+      const status = await ytMusicWebSessionStatus();
+      if (disposed || token !== playbackToken) return;
+      if (!status?.available || !status.state) {
+        showError("Die YouTube-Music-Sitzung antwortet gerade nicht. MediaHub versucht es erneut …");
+        scheduleWebSessionPoll(token, WEB_SESSION_RETRY_MS);
+        return;
+      }
+      webSessionState = status.state;
+      renderWebSessionPlayer(selected, webSessionState);
+      const state = webSessionState.state;
+      if (state === "playing") {
+        playerReady = true;
+        webSessionPlaybackToken = token;
+        webSessionPlayRetries = 0;
+        clearPlaybackWatchdog();
+        armStablePlaybackTimer(token, selected?.id);
+        showError("");
+        ensureMixBuffer().catch(() => scheduleMixRetry());
+      } else if (state === "paused") {
+        clearStablePlaybackTimer();
+        const duration = Number(webSessionState.duration);
+        const position = Number(webSessionState.position);
+        const finished = webSessionPlaybackToken === token
+          && Number.isFinite(duration) && duration > 0
+          && Number.isFinite(position) && duration - position <= 2.5;
+        if (finished && transitionedToken !== token) {
+          transitionedToken = token;
+          confirmStablePlayback(token, selected?.id);
+          clearWebSessionPolling();
+          advancePlayback(token);
+          return;
+        }
+        if (!stoppedByUser && !playerReady && webSessionPlayRetries < 4) {
+          webSessionPlayRetries += 1;
+          await ytMusicWebSessionCommand("play");
+        }
+      } else if (state === "error") {
+        clearPlaybackWatchdog();
+        clearStablePlaybackTimer();
+        showError(status.error?.message || "YouTube Music konnte diesen Titel nicht laden. Öffne YouTube Music, um die Anmeldung zu prüfen.");
+      }
+      try {
+        Promise.resolve(api?.reportProviderState?.(ID, {
+          state: ["playing", "paused", "loading", "stopped", "error"].includes(state) ? state : "loading",
+          title: decode(webSessionState.title || selected?.title),
+          artist: decode(webSessionState.artist || selected?.channel),
+          artwork: webSessionState.artwork || selected?.thumbnail || null,
+          videoId: selected?.id
+        })).catch(() => {});
+      } catch { /* state display must not break playback */ }
+      if (previous?.state === "playing" && state === "paused" && webSessionPlaybackToken === token) {
+        playerReady = true;
+      }
+      scheduleWebSessionPoll(token);
+    }
+
     function showLoggedIn(loggedIn) {
       welcome.classList.toggle("mh-hidden", loggedIn);
       app.classList.toggle("mh-hidden", !loggedIn);
       if (loggedIn) {
         setTab("results", "home");
         loadCatalogue("home").catch(() => renderCatalogue([], "Für dich", "Der Katalog ist gerade nicht erreichbar – nutze einfach die Suche."));
+        ensureWebSessionBackend().catch(() => {});
       } else {
         catalogueRequestToken += 1;
+        hideProviderSession().catch(() => {});
       }
     }
 
@@ -1458,6 +1666,19 @@
       playbackWatchdogTimer = window.setTimeout(() => {
         playbackWatchdogTimer = null;
         if (disposed || token !== playbackToken || selected?.id !== videoId || transitionedToken === token) return;
+        if (webSessionAvailable === true && webSessionPlaybackToken !== token) {
+          clearWebSessionPolling();
+          showError("Der Titel startet noch nicht. Öffne YouTube Music einmal, melde dich dort an und kehre danach zu MediaHub zurück.");
+          renderWebSessionPlayer(selected, webSessionState);
+          api?.reportProviderState?.(ID, {
+            state: "stopped",
+            title: decode(selected?.title),
+            artist: decode(selected?.channel),
+            artwork: selected?.thumbnail || null,
+            videoId: selected?.id
+          });
+          return;
+        }
         if (!playerReady) {
           showError("Der YouTube-Player konnte nicht gestartet werden. Bitte versuche den Titel erneut.");
           frame?.remove();
@@ -1540,7 +1761,9 @@
       compactAutoMixQueue();
       showError("");
       try {
-        if (shouldResolvePlaybackVersion(item)) {
+        const useWebSession = await ensureWebSessionBackend({ refresh: webSessionAvailable === false });
+        if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
+        if (!useWebSession && shouldResolvePlaybackVersion(item)) {
           showError("MediaHub bereitet eine abspielbare Musikvideo-Version vor …");
           let prepared = null;
           prepared = await findPlayableAlternativeQuickly(item);
@@ -1555,10 +1778,39 @@
         const activation = await api?.setActiveProvider?.(ID);
         if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         if (activation?.ok === false) throw new Error(activation.error?.message || "MediaHub konnte nicht aktiviert werden.");
-        await ensurePlayer();
-        if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         const title = decode(item.title);
         const artist = decode(item.channel);
+        if (useWebSession) {
+          clearWebSessionPolling();
+          playerReady = false;
+          webSessionPlaybackToken = 0;
+          webSessionPlayRetries = 0;
+          webSessionState = {
+            state: "loading",
+            title,
+            artist,
+            artwork: item.thumbnail || null,
+            duration: null,
+            position: null
+          };
+          renderWebSessionPlayer(item, webSessionState);
+          const loaded = await ytMusicWebSessionLoad(item.id);
+          if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
+          if (!loaded?.success) {
+            throw new Error(loaded?.error?.message || "YouTube Music konnte den Titel nicht laden. Öffne den Dienst und prüfe deine Anmeldung.");
+          }
+          armPlaybackWatchdog(token, item.id);
+          try {
+            Promise.resolve(api?.reportProviderState?.(ID, { state: "loading", title, artist, artwork: item.thumbnail || null, videoId: item.id })).catch(() => {});
+          } catch { /* playback remains usable when status reporting fails */ }
+          renderResults(currentResults);
+          renderQueue();
+          startWebSessionPolling(token);
+          ensureMixBuffer().catch(() => scheduleMixRetry());
+          return true;
+        }
+        await ensurePlayer();
+        if (token !== playbackToken || playGeneration !== transitionGeneration || disposed) return false;
         playerTitle.textContent = title || "Jetzt läuft";
         post({ command: "load", videoId: item.id, token });
         armPlaybackWatchdog(token, item.id);
@@ -1723,6 +1975,46 @@
     window.addEventListener("message", receivePlayerMessage);
     const unsubscribe = api?.onCommand?.(message => {
       if (message?.providerId !== ID) return;
+      if (webSessionAvailable === true && selected?.id) {
+        if (message.command === "stop") {
+          stoppedByUser = true;
+          transitionGeneration += 1;
+          advanceQueuedToken = 0;
+          mixResumePending = null;
+          mixGeneration += 1;
+          mixRetryAttempt = 0;
+          clearMixRetry();
+          clearPlaybackWatchdog();
+          clearStablePlaybackTimer();
+          clearWebSessionPolling();
+          transitionedToken = playbackToken;
+          ytMusicWebSessionCommand("stop").then(() => {
+            if (disposed) return;
+            webSessionState = { ...webSessionState, state: "stopped", position: 0, audible: false };
+            renderWebSessionPlayer(selected, webSessionState);
+          });
+        } else if (message.command === "pause") {
+          clearPlaybackWatchdog();
+          clearStablePlaybackTimer();
+          ytMusicWebSessionCommand("pause").then(() => scheduleWebSessionPoll(playbackToken, 0));
+        } else if (message.command === "play") {
+          const resumeStoppedTitle = stoppedByUser;
+          stoppedByUser = false;
+          transitionedToken = 0;
+          playerReady = false;
+          webSessionPlaybackToken = 0;
+          webSessionPlayRetries = 0;
+          const action = resumeStoppedTitle
+            ? ytMusicWebSessionLoad(selected.id)
+            : ytMusicWebSessionCommand("play");
+          action.then(() => {
+            if (disposed) return;
+            armPlaybackWatchdog(playbackToken, selected.id);
+            startWebSessionPolling(playbackToken);
+          });
+        }
+        return;
+      }
       if (message.command === "stop") {
         stoppedByUser = true;
         transitionGeneration += 1;
@@ -1753,11 +2045,24 @@
       post(message);
     });
 
+    providerViewButton.addEventListener("click", () => {
+      if (webSessionViewVisible) hideProviderSession();
+      else showProviderSession({ login: webSessionState?.state === "idle" || !webSessionState });
+    });
+
+    const syncProviderViewBounds = () => {
+      if (webSessionViewVisible) ytMusicWebSessionShow(providerViewBounds());
+    };
+    window.addEventListener("resize", syncProviderViewBounds);
+
     login.addEventListener("click", async () => {
       login.disabled = true;
       try {
         await auth.signIn();
         showLoggedIn(true);
+        if (await ensureWebSessionBackend()) {
+          showProviderSession({ login: true }).catch(() => {});
+        }
       } catch (err) {
         login.disabled = false;
         welcomeInner.querySelector("p:not(.mh-eyebrow)").textContent = err.message || "Die Anmeldung ist fehlgeschlagen.";
@@ -1914,7 +2219,10 @@
       clearMixRetry();
       clearPlaybackWatchdog();
       clearStablePlaybackTimer();
+      clearWebSessionPolling();
+      hideProviderSession().catch(() => {});
       window.removeEventListener("message", receivePlayerMessage);
+      window.removeEventListener("resize", syncProviderViewBounds);
       if (typeof unsubscribe === "function") unsubscribe();
       disposeView = null;
     };

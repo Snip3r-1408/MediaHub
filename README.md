@@ -3,9 +3,9 @@
 > YouTube-Musik, Playlisten und ein intelligenter Auto-Mix direkt in WebRadio.
 
 [![Version](https://img.shields.io/github/v/release/Snip3r-1408/MediaHub?display_name=tag&style=flat-square)](https://github.com/Snip3r-1408/MediaHub/releases/latest)
-[![WebRadio](https://img.shields.io/badge/WebRadio-%E2%89%A51.0.7--alpha.5-7166ff?style=flat-square)](https://github.com/YourEliteSystems/WebRadio)
+[![WebRadio](https://img.shields.io/badge/WebRadio-%E2%89%A51.0.7--beta.3-7166ff?style=flat-square)](https://github.com/YourEliteSystems/WebRadio)
 [![Plattform](https://img.shields.io/badge/Plattform-Linux%20%7C%20Windows-22b8cf?style=flat-square)](#voraussetzungen)
-[![Status](https://img.shields.io/badge/Status-Alpha-f59e0b?style=flat-square)](https://github.com/Snip3r-1408/MediaHub/releases)
+[![Status](https://img.shields.io/badge/Status-Beta-f59e0b?style=flat-square)](https://github.com/Snip3r-1408/MediaHub/releases)
 
 MediaHub ist ein eigenständiges Community-Plugin für
 [WebRadio](https://github.com/YourEliteSystems/WebRadio). Es verbindet die
@@ -20,7 +20,9 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Startseite mit YouTube-Music-Empfehlungsreihen
 - Entdecken-Ansicht mit Neuerscheinungen, Trends, Videos, Genres und Stimmungen
 - Detailansichten für öffentliche Alben, Künstler und Playlisten
-- Wiedergabe im integrierten, sichtbaren YouTube-Player
+- Wiedergabe über eine isolierte, persistente YouTube-Music-Web-Sitzung
+- Eigene MediaHub-Playeransicht; die originale Dienstansicht wird nur für
+  Anmeldung oder Fehlerprüfung eingeblendet
 - Steuerung über die zentrale Player-Leiste von WebRadio
 - Beliebig viele lokal gespeicherte Playlisten
 - Wiedergabe der Reihe nach, im Kreis oder zufällig
@@ -32,7 +34,9 @@ Wiedergabemodi und einen endlosen Auto-Mix.
 - Wechselnde Genre-, Entdeckungs-, Jahres- und Stimmungsanfragen
 - Wiedergabe-Rückfall ohne Stille, falls vorübergehend kein neuer Treffer verfügbar ist
 - Filter gegen komplette Alben, Konzerte und stundenlange Zusammenstellungen
-- Automatisches Überspringen von Videos mit Einbettungssperre
+- Direkte Wiedergabe der originalen YouTube-Music-Titel ohne Iframe-
+  Einbettungssperren; auf älteren WebRadio-Versionen bleibt der bisherige
+  Rückfallplayer erhalten
 - Responsive Oberfläche, die sich in Dark, Default, Neon und Carbon einfügt und
   trotzdem ihre eigene MediaHub-Identität behält
 
@@ -78,7 +82,7 @@ Titel bleiben erhalten.
 
 ## Voraussetzungen
 
-- WebRadio **1.0.7-alpha.5** oder neuer
+- WebRadio **1.0.7-beta.3** oder neuer
 - Linux oder Windows mit einer unterstützten WebRadio-Version
 - Python **3.10 oder neuer** für die erweiterte YouTube-Music-Empfehlungsengine
 - Internetverbindung
@@ -98,13 +102,18 @@ bisherigen WebRadio-Suche weiter.
 
 ## Bekannte Einschränkungen
 
-- Einige Videos dürfen vom Rechteinhaber nicht außerhalb von YouTube
-  eingebettet werden. MediaHub erkennt diese beim Abspielen und überspringt sie.
+- Die neue Web-Sitzung vermeidet die bisherigen Iframe-Einbettungssperren. Der
+  alte Rückfallplayer kann bei älteren WebRadio-Versionen weiterhin betroffen
+  sein.
 - Neue Suchvorgänge hängen vom verfügbaren YouTube-API-Kontingent ab. Bei einer
   vorübergehenden Begrenzung verwendet MediaHub vorhandene Titel weiter und
   versucht die Suche mit wachsendem Abstand erneut.
-- YouTube erlaubt keinen versteckten Audio-only-Player. Der Videoplayer muss
-  deshalb sichtbar bleiben.
+- Play, Pause und Stop funktionieren über die zentrale WebRadio-Leiste.
+  Springen und Lautstärke sind über die Web-Session-API von WebRadio derzeit
+  noch nicht verfügbar.
+- Die erste Anmeldung erfolgt in der eingeblendeten originalen
+  YouTube-Music-Ansicht. Die Sitzung bleibt isoliert im WebRadio-Profil
+  gespeichert; MediaHub erhält keine Cookies, Passwörter oder Anmeldetoken.
 - MediaHub befindet sich in der Alpha-Phase und seine Schnittstellen können sich
   gemeinsam mit dem WebRadio Plugin SDK noch ändern.
 - Startseite, Entdecken und öffentliche Detailseiten werden anonym über

@@ -2,7 +2,31 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
-## Unveröffentlicht – MediaHub 0.14
+## 0.14.0-beta.1 – 2026-10-30
+
+### Echte YouTube-Music-Web-Sitzung
+
+- MediaHub nutzt unter WebRadio 1.0.7-beta.3 erstmals eine isolierte,
+  persistente YouTube-Music-Sitzung für Anmeldung und Wiedergabe
+- Titel werden mit ihrer originalen YouTube-Music-ID geladen; die bisherige
+  Suche nach einer einbettbaren Ersatzversion entfällt auf der neuen Strecke
+- Wiedergabe läuft verborgen weiter, während MediaHub seine eigene Oberfläche
+  mit Cover, Titel, Künstler und Status anzeigt
+- Über „YouTube öffnen“ kann die originale Dienstansicht für Anmeldung oder
+  Fehlerprüfung eingeblendet und anschließend wieder verlassen werden
+- Play, Pause und Stop der WebRadio-Playerleiste werden an die sichere Sitzung
+  weitergereicht; Metadaten und Wiedergabestatus fließen zurück an WebRadio
+- Ältere WebRadio-Versionen behalten vorübergehend den bisherigen
+  YouTube-Iframe-Player als Rückfall
+- Die lokale Browser-Brücke akzeptiert ausschließlich feste MediaHub-Routen,
+  ein zufälliges Sitzungstoken und validierte Titel-IDs
+
+### Bekannte Grenzen dieser Beta
+
+- WebRadio stellt für Web-Sitzungen noch kein Springen und keine
+  Lautstärkesteuerung bereit
+- Die echte Google-/YouTube-Music-Anmeldung muss auf Linux und Windows noch
+  praktisch geprüft werden; automatisierte Tests decken die Plugin-Strecke ab
 
 ### Provider Platform begonnen
 
@@ -14,8 +38,8 @@ Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
   dokumentiert
 - Sichere WebRadio-Web-Session-Schnittstelle mit Origin-Beschränkung,
   getrennten Sitzungen und bereinigten Medienzuständen spezifiziert
-- Die aktuelle Wiedergabe bleibt bis zur benötigten WebRadio-Core-Erweiterung
-  unverändert
+- YouTube Music verwendet die neue Web-Session-Strecke; die übrigen Anbieter
+  bleiben bis zu späteren Adaptern deaktiviert
 
 ## 0.13.9 – 2026-10-29
 

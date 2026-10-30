@@ -410,16 +410,74 @@ test("two competing play calls post only the newer load", async () => {
   const harness = await createHarness({ deferActivations: true });
   const firstPlay = harness.hooks.play(song("track-a", "Artist A"));
   const secondPlay = harness.hooks.play(song("track-b", "Artist B"));
-  assert.equal(harness.activations.length, 2);
+  await harness.flush();
+  assert.equal(harness.activations.length, 1);
 
-  harness.activations[1].resolve({ ok: true });
-  assert.equal(await secondPlay, true);
   harness.activations[0].resolve({ ok: true });
+  assert.equal(await secondPlay, true);
   assert.equal(await firstPlay, false);
 
   const loads = harness.framePosts.filter(message => message.command === "load");
   assert.deepEqual(loads.map(message => message.videoId), ["track-b"]);
   assert.equal(loads[0].token, 2);
+});
+
+test("WebRadio web sessions play original YouTube Music IDs without the iframe fallback", async () => {
+  const calls = [];
+  const providerReports = [];
+  let sessionState = {
+    state: "idle",
+    title: null,
+    artist: null,
+    artwork: null,
+    duration: null,
+    position: null,
+    audible: false
+  };
+  const original = {
+    ...song("web-track-1", "Falling In Reverse"),
+    title: "Watch The World Burn",
+    channel: "Falling In Reverse",
+    source: "ytmusicapi",
+    kind: "song",
+    videoType: "MUSIC_VIDEO_TYPE_ATV"
+  };
+  const harness = await createHarness({
+    providerReports,
+    ytMusic(route, payload) {
+      calls.push({ route, payload });
+      if (route === "/v1/web-session/status") {
+        return { available: true, capabilities: { media: true }, state: sessionState, error: null };
+      }
+      if (route === "/v1/web-session/load") {
+        sessionState = {
+          state: "playing",
+          title: original.title,
+          artist: original.channel,
+          artwork: original.thumbnail,
+          duration: 203,
+          position: 1,
+          audible: true
+        };
+        return { success: true, playback: { success: true } };
+      }
+      if (route === "/v1/web-session/command") return { success: true };
+      return [];
+    }
+  });
+
+  assert.equal(await harness.hooks.play(original), true);
+  await harness.flush(30);
+
+  assert.ok(calls.some(call => call.route === "/v1/web-session/load" && call.payload.videoId === original.id));
+  assert.equal(calls.some(call => call.route === "/v1/search" && call.payload.filter === "videos"), false);
+  assert.equal(harness.playerFrame(), undefined, "the restricted YouTube iframe must not be created");
+  assert.equal(harness.assetRequests.includes("player.html"), false);
+  assert.ok(providerReports.some(([, state]) => state.state === "playing" && state.videoId === original.id));
+
+  harness.window.playerAPI.commandListener({ providerId: "mediahub", command: "pause" });
+  await harness.flush(20);
+  assert.ok(calls.some(call => call.route === "/v1/web-session/command" && call.payload.type === "pause"));
 });
 
 test("an ended event from an old token cannot skip the new title", async () => {

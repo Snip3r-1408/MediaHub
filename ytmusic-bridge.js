@@ -21,6 +21,17 @@ const ROUTE_ACTIONS = Object.freeze({
   "/v1/playlist": "playlist",
   "/v1/mood-playlists": "mood_playlists"
 });
+const WEB_SESSION_ROUTES = new Set([
+  "/v1/web-session/status",
+  "/v1/web-session/login",
+  "/v1/web-session/show",
+  "/v1/web-session/hide",
+  "/v1/web-session/load",
+  "/v1/web-session/command",
+  "/v1/web-session/reload"
+]);
+const WEB_SESSION_ID = "youtube-music";
+const WEB_SESSION_ORIGIN = "https://music.youtube.com";
 
 function pythonCandidates(platform = process.platform) {
   return platform === "win32"
@@ -39,7 +50,7 @@ function allowedOrigin(origin) {
 }
 
 class YtMusicBridge {
-  constructor({ root = __dirname, logger = console, spawnProcess = spawn } = {}) {
+  constructor({ root = __dirname, logger = console, spawnProcess = spawn, webSession = null, pluginId = "mediahub" } = {}) {
     this.root = root;
     this.logger = logger;
     this.spawnProcess = spawnProcess;
@@ -53,10 +64,17 @@ class YtMusicBridge {
     this.nextId = 1;
     this.ready = false;
     this.stopping = false;
+    this.webSession = webSession;
+    this.pluginId = pluginId;
+    this.webSessionAvailable = false;
+    this.webSessionState = null;
+    this.webSessionError = null;
+    this.webSessionUnsubscribers = [];
   }
 
   async start() {
     this.stopping = false;
+    this._startWebSession();
     await this._startHelper();
     if (this.stopping) throw new Error("YouTube-Music-Engine wurde während des Starts beendet");
     this.server = http.createServer((request, response) => this._handleHttp(request, response));
@@ -75,10 +93,38 @@ class YtMusicBridge {
       url: `http://127.0.0.1:${port}`,
       token: this.token,
       available: this.ready,
+      webSessionAvailable: this.webSessionAvailable,
       protocol: 1
     }), { encoding: "utf8", mode: 0o600 });
     try { fs.chmodSync(this.runtimeFile, 0o600); } catch { /* Windows */ }
-    return { port, available: this.ready };
+    return { port, available: this.ready, webSessionAvailable: this.webSessionAvailable };
+  }
+
+  _startWebSession() {
+    if (!this.webSession) return;
+    try {
+      this.webSession.create({
+        pluginId: this.pluginId,
+        sessionId: WEB_SESSION_ID,
+        origin: WEB_SESSION_ORIGIN
+      });
+      this.webSessionState = this.webSession.getState(WEB_SESSION_ID);
+      this.webSessionUnsubscribers.push(
+        this.webSession.onState(WEB_SESSION_ID, state => {
+          this.webSessionState = state;
+          this.webSessionError = null;
+        }),
+        this.webSession.onError(WEB_SESSION_ID, error => {
+          this.webSessionError = error || { code: "WEB_SESSION_ERROR", message: "Web-Sitzungsfehler" };
+        })
+      );
+      this.webSessionAvailable = true;
+      this.logger.info?.("YouTube-Music-Web-Sitzung ist bereit.");
+    } catch (error) {
+      this.webSessionAvailable = false;
+      this.webSessionError = { code: error.code || "WEB_SESSION_UNAVAILABLE", message: error.message };
+      this.logger.warn?.(`YouTube-Music-Web-Sitzung ist nicht verfügbar: ${error.message}`);
+    }
   }
 
   async _startHelper() {
@@ -209,10 +255,11 @@ class YtMusicBridge {
       return this._json(response, 401, { error: "Nicht autorisiert" });
     }
     if (request.method === "GET" && request.url === "/health") {
-      return this._json(response, 200, { available: this.ready });
+      return this._json(response, 200, { available: this.ready, webSessionAvailable: this.webSessionAvailable });
     }
     const action = ROUTE_ACTIONS[request.url] || "";
-    if (request.method !== "POST" || !action) return this._json(response, 404, { error: "Nicht gefunden" });
+    const webSessionRoute = WEB_SESSION_ROUTES.has(request.url);
+    if (request.method !== "POST" || (!action && !webSessionRoute)) return this._json(response, 404, { error: "Nicht gefunden" });
     try {
       const chunks = [];
       let size = 0;
@@ -222,11 +269,67 @@ class YtMusicBridge {
         chunks.push(chunk);
       }
       const payload = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}");
-      const result = await this.call(action, payload);
+      const result = webSessionRoute
+        ? await this._handleWebSessionRoute(request.url, payload)
+        : await this.call(action, payload);
       return this._json(response, 200, { ok: true, result });
     } catch (error) {
       return this._json(response, error.statusCode || 502, { error: error.message || "Anfrage fehlgeschlagen" });
     }
+  }
+
+  async _handleWebSessionRoute(route, payload) {
+    if (!this.webSessionAvailable || !this.webSession) {
+      const error = new Error(this.webSessionError?.message || "Die YouTube-Music-Web-Sitzung ist nicht verfügbar");
+      error.statusCode = 503;
+      throw error;
+    }
+    if (route === "/v1/web-session/status") {
+      return {
+        available: true,
+        capabilities: this.webSession.getCapabilities(),
+        state: this.webSession.getState(WEB_SESSION_ID),
+        error: this.webSessionError
+      };
+    }
+    if (route === "/v1/web-session/login") {
+      const loaded = await this.webSession.openLogin(WEB_SESSION_ID);
+      if (payload?.bounds) await this.webSession.show(WEB_SESSION_ID, payload.bounds);
+      return { ...loaded, state: this.webSession.getState(WEB_SESSION_ID) };
+    }
+    if (route === "/v1/web-session/show") {
+      return this.webSession.show(WEB_SESSION_ID, payload?.bounds);
+    }
+    if (route === "/v1/web-session/hide") {
+      return this.webSession.hide(WEB_SESSION_ID);
+    }
+    if (route === "/v1/web-session/reload") {
+      return this.webSession.reload(WEB_SESSION_ID);
+    }
+    if (route === "/v1/web-session/command") {
+      const type = String(payload?.type || "");
+      if (!["play", "pause", "stop"].includes(type)) {
+        const error = new Error("Ungültiger Web-Sitzungsbefehl");
+        error.statusCode = 400;
+        throw error;
+      }
+      return this.webSession.command(WEB_SESSION_ID, { type });
+    }
+    if (route === "/v1/web-session/load") {
+      const videoId = String(payload?.videoId || "");
+      if (!/^[A-Za-z0-9_-]{6,32}$/.test(videoId)) {
+        const error = new Error("Ungültige YouTube-Music-Titel-ID");
+        error.statusCode = 400;
+        throw error;
+      }
+      const target = new URL("/watch", `${WEB_SESSION_ORIGIN}/`);
+      target.searchParams.set("v", videoId);
+      const loaded = await this.webSession.load(WEB_SESSION_ID, target.href);
+      if (!loaded?.success || payload?.autoplay === false) return loaded;
+      const playback = await this.webSession.command(WEB_SESSION_ID, { type: "play" });
+      return { success: true, playback };
+    }
+    throw Object.assign(new Error("Nicht gefunden"), { statusCode: 404 });
   }
 
   _stopHelper() {
@@ -250,9 +353,25 @@ class YtMusicBridge {
     this.server?.close();
     this.server = null;
     this._stopHelper();
+    for (const unsubscribe of this.webSessionUnsubscribers.splice(0)) {
+      try { unsubscribe(); } catch { /* already removed */ }
+    }
+    if (this.webSessionAvailable) {
+      try { this.webSession.hide(WEB_SESSION_ID); } catch { /* already gone */ }
+    }
+    this.webSessionAvailable = false;
+    this.webSessionState = null;
     try { fs.rmSync(this.runtimeFile, { force: true }); } catch { /* already gone */ }
     try { fs.rmdirSync(this.runtimeDir); } catch { /* not empty or already gone */ }
   }
 }
 
-module.exports = { YtMusicBridge, ROUTE_ACTIONS, allowedOrigin, pythonCandidates };
+module.exports = {
+  YtMusicBridge,
+  ROUTE_ACTIONS,
+  WEB_SESSION_ROUTES,
+  WEB_SESSION_ID,
+  WEB_SESSION_ORIGIN,
+  allowedOrigin,
+  pythonCandidates
+};
