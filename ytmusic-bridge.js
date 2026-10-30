@@ -32,6 +32,7 @@ const WEB_SESSION_ROUTES = new Set([
 ]);
 const WEB_SESSION_ID = "youtube-music";
 const WEB_SESSION_ORIGIN = "https://music.youtube.com";
+const WEB_SESSION_RETRY_DELAYS = [0, 500, 1200];
 
 function pythonCandidates(platform = process.platform) {
   return platform === "win32"
@@ -293,9 +294,20 @@ class YtMusicBridge {
       };
     }
     if (route === "/v1/web-session/login") {
-      const loaded = await this.webSession.openLogin(WEB_SESSION_ID);
-      if (payload?.bounds) await this.webSession.show(WEB_SESSION_ID, payload.bounds);
-      return { ...loaded, state: this.webSession.getState(WEB_SESSION_ID) };
+      const loaded = await this._loadWebSessionWithRetry(
+        () => this.webSession.openLogin(WEB_SESSION_ID),
+        "YouTube Music"
+      );
+      if (!loaded?.success) return { ...loaded, state: this.webSession.getState(WEB_SESSION_ID) };
+      const shown = payload?.bounds
+        ? await this.webSession.show(WEB_SESSION_ID, payload.bounds)
+        : { success: true };
+      return {
+        success: shown?.success !== false,
+        load: loaded,
+        ...(shown?.error ? { error: shown.error } : {}),
+        state: this.webSession.getState(WEB_SESSION_ID)
+      };
     }
     if (route === "/v1/web-session/show") {
       return this.webSession.show(WEB_SESSION_ID, payload?.bounds);
@@ -324,12 +336,32 @@ class YtMusicBridge {
       }
       const target = new URL("/watch", `${WEB_SESSION_ORIGIN}/`);
       target.searchParams.set("v", videoId);
-      const loaded = await this.webSession.load(WEB_SESSION_ID, target.href);
+      const loaded = await this._loadWebSessionWithRetry(
+        () => this.webSession.load(WEB_SESSION_ID, target.href),
+        "YouTube-Music-Titel"
+      );
       if (!loaded?.success || payload?.autoplay === false) return loaded;
       const playback = await this.webSession.command(WEB_SESSION_ID, { type: "play" });
       return { success: true, playback };
     }
     throw Object.assign(new Error("Nicht gefunden"), { statusCode: 404 });
+  }
+
+  async _loadWebSessionWithRetry(load, label) {
+    let result = null;
+    for (let attempt = 0; attempt < WEB_SESSION_RETRY_DELAYS.length; attempt += 1) {
+      const delay = WEB_SESSION_RETRY_DELAYS[attempt];
+      if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+      result = await load();
+      if (result?.success) return result;
+      if (attempt < WEB_SESSION_RETRY_DELAYS.length - 1) {
+        this.logger.warn?.(`${label} konnte nicht geladen werden; neuer Versuch ${attempt + 2}/${WEB_SESSION_RETRY_DELAYS.length}.`);
+      }
+    }
+    return result || {
+      success: false,
+      error: { code: "LOAD_FAILED", message: `${label} konnte nicht geladen werden.` }
+    };
   }
 
   _stopHelper() {
@@ -372,6 +404,7 @@ module.exports = {
   WEB_SESSION_ROUTES,
   WEB_SESSION_ID,
   WEB_SESSION_ORIGIN,
+  WEB_SESSION_RETRY_DELAYS,
   allowedOrigin,
   pythonCandidates
 };

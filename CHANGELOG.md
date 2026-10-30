@@ -2,6 +2,18 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.14.0-beta.2 – 2026-10-30
+
+### Web-Sitzung stabilisiert
+
+- Kurzzeitige `ERR_FAILED`-Fehler beim ersten Laden von YouTube Music werden
+  automatisch mit kurzen Abständen erneut versucht
+- Die originale Dienstansicht wird erst eingeblendet, nachdem die Seite
+  erfolgreich geladen wurde; bei einem endgültigen Fehler bleibt keine weiße
+  Fläche mehr über MediaHub stehen
+- Fehlermeldungen nennen nun die vom WebRadio-Core zurückgegebene Ursache
+- Auch das Laden eines Titels nutzt dieselbe begrenzte Wiederholung
+
 ## 0.14.0-beta.1 – 2026-10-30
 
 ### Echte YouTube-Music-Web-Sitzung

@@ -86,6 +86,7 @@ test("bridge exposes only validated YouTube Music web-session operations", async
   fs.copyFileSync(path.join(sourceRoot, "ytmusic_helper.py"), path.join(tempRoot, "ytmusic_helper.py"));
   fs.symlinkSync(path.join(sourceRoot, "vendor"), path.join(tempRoot, "vendor"), "dir");
   const calls = [];
+  let loginAttempts = 0;
   const state = { state: "paused", title: "Test", artist: "Artist", duration: 180, position: 12 };
   const webSession = {
     create(options) { calls.push(["create", options]); return { sessionId: options.sessionId, state: "idle" }; },
@@ -93,7 +94,13 @@ test("bridge exposes only validated YouTube Music web-session operations", async
     getCapabilities() { return { commands: { play: true, pause: true, stop: true }, encryptedMedia: false }; },
     onState(_sessionId, callback) { callback(state); return () => {}; },
     onError() { return () => {}; },
-    openLogin(sessionId) { calls.push(["openLogin", sessionId]); return Promise.resolve({ success: true }); },
+    openLogin(sessionId) {
+      calls.push(["openLogin", sessionId]);
+      loginAttempts += 1;
+      return Promise.resolve(loginAttempts === 1
+        ? { success: false, error: { code: "LOAD_FAILED", message: "temporary" } }
+        : { success: true });
+    },
     show(sessionId, bounds) { calls.push(["show", sessionId, bounds]); return Promise.resolve({ success: true }); },
     hide(sessionId) { calls.push(["hide", sessionId]); return { success: true }; },
     reload(sessionId) { calls.push(["reload", sessionId]); return { success: true }; },
@@ -125,6 +132,7 @@ test("bridge exposes only validated YouTube Music web-session operations", async
   const bounds = { x: 200, y: 100, width: 800, height: 600 };
   const login = await request("/v1/web-session/login", { bounds });
   assert.equal(login.body.result.success, true);
+  assert.equal(loginAttempts, 2, "a temporary core load failure should be retried");
   const loaded = await request("/v1/web-session/load", { videoId: "qMXESlny4-I", autoplay: true });
   assert.equal(loaded.body.result.success, true);
   assert.ok(calls.some(call => call[0] === "load" && call[2] === "https://music.youtube.com/watch?v=qMXESlny4-I"));

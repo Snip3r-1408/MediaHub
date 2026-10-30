@@ -524,7 +524,12 @@
         ? await ytMusicWebSessionLogin(bounds)
         : await ytMusicWebSessionShow(bounds);
       if (!result?.success && result?.state !== "loading") {
-        showError("YouTube Music konnte nicht geöffnet werden. Bitte MediaHub neu laden.");
+        await ytMusicWebSessionHide();
+        webSessionViewVisible = false;
+        updateProviderViewButton();
+        showError(result?.error?.message
+          ? `YouTube Music konnte nicht geöffnet werden: ${result.error.message}`
+          : "YouTube Music konnte nicht geöffnet werden. Bitte versuche es erneut.");
         return false;
       }
       webSessionViewVisible = true;
