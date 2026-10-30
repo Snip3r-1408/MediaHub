@@ -32,6 +32,7 @@ const WEB_SESSION_ROUTES = new Set([
 ]);
 const WEB_SESSION_ID = "youtube-music";
 const WEB_SESSION_ORIGIN = "https://music.youtube.com";
+const WEB_SESSION_LOGIN_URL = "https://accounts.google.com/ServiceLogin?service=youtube&hl=de&continue=https%3A%2F%2Fmusic.youtube.com%2F";
 const WEB_SESSION_RETRY_DELAYS = [0, 500, 1200];
 
 function pythonCandidates(platform = process.platform) {
@@ -295,8 +296,8 @@ class YtMusicBridge {
     }
     if (route === "/v1/web-session/login") {
       const loaded = await this._loadWebSessionWithRetry(
-        () => this.webSession.openLogin(WEB_SESSION_ID),
-        "YouTube Music"
+        () => this.webSession.load(WEB_SESSION_ID, WEB_SESSION_LOGIN_URL),
+        "Google-Anmeldung"
       );
       if (!loaded?.success) return { ...loaded, state: this.webSession.getState(WEB_SESSION_ID) };
       const shown = payload?.bounds
@@ -404,6 +405,7 @@ module.exports = {
   WEB_SESSION_ROUTES,
   WEB_SESSION_ID,
   WEB_SESSION_ORIGIN,
+  WEB_SESSION_LOGIN_URL,
   WEB_SESSION_RETRY_DELAYS,
   allowedOrigin,
   pythonCandidates

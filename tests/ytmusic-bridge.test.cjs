@@ -9,6 +9,7 @@ const {
   YtMusicBridge,
   ROUTE_ACTIONS,
   WEB_SESSION_ROUTES,
+  WEB_SESSION_LOGIN_URL,
   allowedOrigin,
   pythonCandidates
 } = require("../ytmusic-bridge");
@@ -94,17 +95,20 @@ test("bridge exposes only validated YouTube Music web-session operations", async
     getCapabilities() { return { commands: { play: true, pause: true, stop: true }, encryptedMedia: false }; },
     onState(_sessionId, callback) { callback(state); return () => {}; },
     onError() { return () => {}; },
-    openLogin(sessionId) {
-      calls.push(["openLogin", sessionId]);
-      loginAttempts += 1;
-      return Promise.resolve(loginAttempts === 1
-        ? { success: false, error: { code: "LOAD_FAILED", message: "temporary" } }
-        : { success: true });
-    },
+    openLogin(sessionId) { calls.push(["openLogin", sessionId]); return Promise.resolve({ success: true }); },
     show(sessionId, bounds) { calls.push(["show", sessionId, bounds]); return Promise.resolve({ success: true }); },
     hide(sessionId) { calls.push(["hide", sessionId]); return { success: true }; },
     reload(sessionId) { calls.push(["reload", sessionId]); return { success: true }; },
-    load(sessionId, url) { calls.push(["load", sessionId, url]); return Promise.resolve({ success: true }); },
+    load(sessionId, url) {
+      calls.push(["load", sessionId, url]);
+      if (url === WEB_SESSION_LOGIN_URL) {
+        loginAttempts += 1;
+        return Promise.resolve(loginAttempts === 1
+          ? { success: false, error: { code: "LOAD_FAILED", message: "temporary" } }
+          : { success: true });
+      }
+      return Promise.resolve({ success: true });
+    },
     command(sessionId, command) { calls.push(["command", sessionId, command]); return Promise.resolve({ success: true }); }
   };
   const bridge = new YtMusicBridge({ root: tempRoot, logger: { info() {}, warn() {} }, webSession });
@@ -133,6 +137,7 @@ test("bridge exposes only validated YouTube Music web-session operations", async
   const login = await request("/v1/web-session/login", { bounds });
   assert.equal(login.body.result.success, true);
   assert.equal(loginAttempts, 2, "a temporary core load failure should be retried");
+  assert.ok(calls.some(call => call[0] === "load" && call[2] === WEB_SESSION_LOGIN_URL));
   const loaded = await request("/v1/web-session/load", { videoId: "qMXESlny4-I", autoplay: true });
   assert.equal(loaded.body.result.success, true);
   assert.ok(calls.some(call => call[0] === "load" && call[2] === "https://music.youtube.com/watch?v=qMXESlny4-I"));

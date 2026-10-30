@@ -570,7 +570,7 @@
       const status = el("p", "mh-web-state", webSessionStatusText(state?.state));
       const open = el("button", "mh-btn ghost", "YouTube Music öffnen");
       open.type = "button";
-      open.addEventListener("click", () => showProviderSession({ login: state?.state === "idle" }));
+      open.addEventListener("click", () => showProviderSession({ login: true }));
       const actions = el("div", "mh-web-actions");
       actions.append(open);
       copy.append(el("span", "mh-web-kicker", "MEDIAHUB · YOUTUBE MUSIC"), el("strong", "", title), el("span", "", artist), status, actions);
@@ -2052,7 +2052,7 @@
 
     providerViewButton.addEventListener("click", () => {
       if (webSessionViewVisible) hideProviderSession();
-      else showProviderSession({ login: webSessionState?.state === "idle" || !webSessionState });
+      else showProviderSession({ login: true });
     });
 
     const syncProviderViewBounds = () => {

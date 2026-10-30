@@ -2,6 +2,17 @@
 
 Alle wichtigen Änderungen an MediaHub werden hier dokumentiert.
 
+## 0.14.0-beta.4 – 2026-10-30
+
+### Echte Google-Anmeldeseite
+
+- „YouTube öffnen“ lädt nun den Google-`ServiceLogin` für YouTube Music statt
+  lediglich die öffentliche Musik-Startseite
+- Die Konto-Weiterleitung über `accounts.youtube.com` ist als exakte
+  Web-Session-Origin freigegeben
+- Bereits angemeldete Sitzungen werden von Google direkt zurück zu YouTube
+  Music geleitet; neue Sitzungen zeigen die Kontoanmeldung
+
 ## 0.14.0-beta.3 – 2026-10-30
 
 ### YouTube-Einwilligungsseite freigegeben
